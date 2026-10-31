@@ -2,7 +2,11 @@
 //!
 //! `build.rs` embeds every font in craft-fonts' manifest when PdfCraft is built with
 //! `CRAFT_FONTS_DIR=<checkout>`; otherwise [`CRAFT_FONTS`] is empty and everything here returns
-//! nothing. Callers must work either way.
+//! nothing. Callers must work either way. Thai alone can also come from a face installed on the
+//! machine ([`installed_thai_font`]).
+
+use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 /// A font from the optional craft-fonts build input (empty unless built with `CRAFT_FONTS_DIR`).
 pub struct CraftFont {
@@ -71,8 +75,74 @@ pub fn ui_thai_fonts() -> Vec<&'static CraftFont> {
     CRAFT_FONTS.iter().filter(|f| f.covers("Thai")).collect()
 }
 
+/// The face for Thai text written into PDFs: the first `Thai` face, else [`installed_thai_font`].
 pub fn document_thai_font() -> Option<&'static CraftFont> {
-    ui_thai_fonts().into_iter().next()
+    ui_thai_fonts().into_iter().next().or_else(installed_thai_font)
+}
+
+/// Thai characters a document face must have: letters, a vowel, a tone mark and a digit.
+const THAI_PROBE: &str = "กฮำ่๑";
+
+/// The largest installed face read, which is also what [`crate::embedding::validate`] accepts.
+const MAX_INSTALLED_BYTES: u64 = 16 << 20;
+
+/// A Thai face already installed on this machine, read once. Text written with it carries the
+/// face's outlines into the PDF, unlike every other installed face, so only a standalone face
+/// whose licence bits allow editable embedding qualifies. `PDFCRAFT_SYSTEM_FONTS=0` turns it off.
+pub fn installed_thai_font() -> Option<&'static CraftFont> {
+    static FACE: OnceLock<Option<CraftFont>> = OnceLock::new();
+    FACE.get_or_init(|| {
+        if cfg!(target_arch = "wasm32") || std::env::var_os("PDFCRAFT_SYSTEM_FONTS").is_some_and(|v| v == "0") {
+            return None;
+        }
+        installed_thai_candidates().iter().find_map(|path| read_thai_face(path))
+    })
+    .as_ref()
+}
+
+/// The face at `path` when it is a regular file that shows Thai and may be embedded. Its bytes
+/// live as long as the process: this runs once, and [`CraftFont`] holds static data.
+fn read_thai_face(path: &Path) -> Option<CraftFont> {
+    let meta = std::fs::metadata(path).ok()?;
+    if !meta.is_file() || meta.len() > MAX_INSTALLED_BYTES {
+        return None;
+    }
+    let bytes = std::fs::read(path).ok()?;
+    if !crate::embedding::covers(&bytes, THAI_PROBE) {
+        return None;
+    }
+    // `names` validates the face first.
+    let (family, _) = crate::embedding::names(&bytes).ok()?;
+    let family: &'static str = Box::leak(family.into_boxed_str());
+    let bytes: &'static [u8] = Box::leak(bytes.into_boxed_slice());
+    Some(CraftFont { family, style: "Regular", scripts: &["Thai"], bytes })
+}
+
+/// Where a Thai document face may be, best first: a document face the user installed, then what
+/// the system ships. Only standalone `.ttf` files: shaping and embedding refuse a collection, which
+/// rules out Thonburi on macOS. Tahoma has the GSUB and GPOS tables shaping needs.
+fn installed_thai_candidates() -> Vec<PathBuf> {
+    const DOCUMENT_FACES: &[&str] = &["Sarabun-Regular.ttf", "THSarabunNew.ttf", "NotoSansThai-Regular.ttf"];
+    if cfg!(windows) {
+        let root = std::env::var_os("WINDIR").or_else(|| std::env::var_os("SystemRoot"));
+        let fonts = root.map_or_else(|| PathBuf::from(r"C:\Windows"), PathBuf::from).join("Fonts");
+        DOCUMENT_FACES.iter().copied().chain(["LeelawUI.ttf", "tahoma.ttf"]).map(|f| fonts.join(f)).collect()
+    } else if cfg!(target_os = "macos") {
+        let mut dirs = vec![PathBuf::from("/Library/Fonts")];
+        dirs.extend(std::env::var_os("HOME").map(|home| PathBuf::from(home).join("Library/Fonts")));
+        let mut paths: Vec<PathBuf> = dirs.iter().flat_map(|dir| DOCUMENT_FACES.iter().map(move |f| dir.join(f))).collect();
+        paths.push(PathBuf::from("/System/Library/Fonts/Supplemental/Tahoma.ttf"));
+        paths
+    } else {
+        let mut dirs = vec![
+            PathBuf::from("/usr/share/fonts/truetype/noto"),
+            PathBuf::from("/usr/share/fonts/noto"),
+            PathBuf::from("/usr/share/fonts/google-noto"),
+            PathBuf::from("/usr/local/share/fonts"),
+        ];
+        dirs.extend(std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share/fonts")));
+        dirs.iter().flat_map(|dir| DOCUMENT_FACES.iter().map(move |f| dir.join(f))).collect()
+    }
 }
 
 /// The `Deva` craft-fonts faces for Devanagari interface text (the Hindi catalog, file names,
@@ -371,5 +441,36 @@ mod tests {
             assert_eq!(ui.first().map(|f| f.family), Some("BIZ UDPGothic"));
         }
         assert_eq!(document_japanese_font().map(|f| f.family), Some("Shippori Mincho"));
+    }
+
+    #[test]
+    fn only_a_readable_face_with_thai_is_an_installed_thai_font() {
+        let inter = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../../assets/fonts/Inter-Regular.ttf"));
+        assert!(read_thai_face(inter).is_none(), "Inter has no Thai");
+        assert!(read_thai_face(Path::new("definitely/not/here.ttf")).is_none());
+        // A directory is not a font.
+        assert!(read_thai_face(&std::env::temp_dir()).is_none());
+    }
+
+    #[test]
+    fn installed_thai_candidates_are_standalone_absolute_faces() {
+        let list = installed_thai_candidates();
+        assert!(!list.is_empty());
+        assert!(list.iter().all(|p| p.is_absolute() || cfg!(windows)), "{list:?}");
+        // A collection could never pass `embedding::validate`.
+        assert!(list.iter().all(|p| p.extension().is_some_and(|e| e == "ttf")), "{list:?}");
+    }
+
+    /// macOS ships Tahoma, so here writing Thai needs no craft-fonts.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn a_mac_writes_thai_with_an_installed_embeddable_face() {
+        if std::env::var_os("PDFCRAFT_SYSTEM_FONTS").is_some_and(|v| v == "0") {
+            return;
+        }
+        let face = installed_thai_font().expect("an installed Thai document face");
+        assert!(crate::embedding::validate(face.bytes).is_ok());
+        assert!(crate::embedding::covers(face.bytes, "น้ำ กิ่ ผู้ใช้ ๑๒๓ Hello"));
+        assert!(face.covers("Thai"));
     }
 }

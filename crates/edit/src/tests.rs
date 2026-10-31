@@ -6448,10 +6448,27 @@ fn a_subset_program_is_not_trusted_for_new_characters_and_the_error_names_the_ch
     // A character no fallback face has is refused, named, and left as it was.
     let mut doc = embedded_program_page("BT /F1 12 Tf 72 700 Td (Stable text) Tj ET", "ABCDEF+Inter-Regular");
     let before = page_content_bytes(&doc, 0);
-    let result = text::rewrite_block(&mut doc, 0, 0, Some("Stable กtext"), &text::BlockStyle::default());
+    let result = text::rewrite_block(&mut doc, 0, 0, Some("Stable कtext"), &text::BlockStyle::default());
     let Err(EditError::Invalid(msg)) = result else { panic!("expected a clear error, got {result:?}") };
-    assert!(msg.contains("ก (U+0E01)") && msg.contains("Load font") && !msg.contains("Japanese"), "{msg}");
+    assert!(msg.contains("क (U+0915)") && msg.contains("Load font") && !msg.contains("Japanese"), "{msg}");
     assert_eq!(page_content_bytes(&doc, 0), before);
+}
+
+/// Thai the subset can't show takes a complete Thai document face for the whole paragraph, and a
+/// row with no Thai in it goes with it, so no row mixes fonts.
+#[test]
+fn thai_a_subset_cant_show_takes_a_complete_thai_face() {
+    let usable = [pdfcraft_fonts::document_thai_font(), pdfcraft_fonts::installed_thai_font()];
+    if !usable.into_iter().flatten().any(|face| pdfcraft_fonts::embedding::validate(face.bytes).is_ok()) {
+        eprintln!("skipping: no embeddable Thai face in this build or on this machine");
+        return;
+    }
+    let mut doc = embedded_program_page("BT /F1 12 Tf 72 700 Td (Stable text) Tj ET", "ABCDEF+Inter-Regular");
+    let edit = text::rewrite_block(&mut doc, 0, 0, Some("Stable กิ่ น้ำ text\nLatin row"), &text::BlockStyle::default()).unwrap();
+    assert!(edit.substituted.is_some(), "the change of font is reported");
+    let shown: Vec<String> = text::text_blocks(&reopen(&doc), 0).unwrap().into_iter().map(|block| block.editor_text).collect();
+    let shown = shown.join("\n");
+    assert!(shown.contains('ก') && shown.contains("Latin row"), "{shown}");
 }
 
 #[test]

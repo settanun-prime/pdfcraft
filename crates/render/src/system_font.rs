@@ -9,6 +9,10 @@
 //! for exports, printing and OCR). It is read at runtime and never embedded or shipped
 //! (AGENTS.md §1.4), Noto CJK and Source Han are left out on purpose (§1.1), and
 //! `PDFCRAFT_SYSTEM_FONTS=0` turns it off, as for the interface font.
+//!
+//! Thai works the same way, except that Word and others write a Thai font as an Identity CID font
+//! with no collection, so the font's name is the hint (see [`names_thai_family`]). The PDF's
+//! `ToUnicode` still picks each glyph.
 
 use std::collections::HashMap;
 use std::io::Read as _;
@@ -35,6 +39,7 @@ enum Script {
     SimplifiedChinese,
     TraditionalChinese,
     Korean,
+    Thai,
 }
 
 impl Script {
@@ -52,15 +57,24 @@ impl Script {
 
     /// A character the face must have to be worth using. Each is common and not shared by the
     /// other scripts' faces: 物 (Japanese; also Chinese, so it only rules out Latin-only faces),
-    /// 欢 (Simplified only), 說 (Traditional only), 한 (Hangul).
+    /// 欢 (Simplified only), 說 (Traditional only), 한 (Hangul), ก (Thai).
     fn probe(self) -> char {
         match self {
             Self::Japanese => '\u{7269}',
             Self::SimplifiedChinese => '\u{6B22}',
             Self::TraditionalChinese => '\u{8AAA}',
             Self::Korean => '\u{D55C}',
+            Self::Thai => '\u{0E01}',
         }
     }
+}
+
+/// Whether a font's name is that of a Thai typeface (`THSarabunNew`, `ABCDEF+Tahoma-Bold`).
+fn names_thai_family(name: &str) -> bool {
+    let key = pdfcraft_fonts::embedding::face_key(name);
+    ["tahoma", "sarabun", "angsana", "cordia", "browallia", "leelawadee", "thonburi", "sukhumvit", "notosansthai", "notoserifthai"]
+        .iter()
+        .any(|family| key.contains(family))
 }
 
 /// One installed file and the words (in a face's family name) that pick the face for the right
@@ -111,13 +125,15 @@ impl ChineseFamily {
     }
 }
 
-/// The installed face to draw a CID font of `query`'s collection with, as `(data, face index)`.
-/// `None` when it is turned off, the collection isn't one of the four, or nothing fits.
+/// The installed face to draw a CID font of `query`'s collection, or of a Thai family, with, as
+/// `(data, face index)`. `None` when it is turned off, the font is neither, or nothing fits.
 pub(crate) fn fallback(query: &FallbackFontQuery) -> Option<(FontData, u32)> {
     if cfg!(target_arch = "wasm32") || std::env::var_os("PDFCRAFT_SYSTEM_FONTS").is_some_and(|v| v == "0") {
         return None;
     }
-    let script = Script::of(&query.character_collection.as_ref()?.family)?;
+    let names = [&query.post_script_name, &query.font_family, &query.font_name];
+    let thai = || names.into_iter().flatten().any(|name| names_thai_family(name)).then_some(Script::Thai);
+    let script = query.character_collection.as_ref().and_then(|collection| Script::of(&collection.family)).or_else(thai)?;
     let bold = query.is_bold || query.font_weight >= 600;
     let family = ChineseFamily::of(query.post_script_name.as_deref().unwrap_or_default());
     /// A face file and the index of the chosen face in it, or `None` when nothing fits.
@@ -212,6 +228,7 @@ fn candidates(script: Script, family: ChineseFamily, bold: bool) -> Vec<Candidat
         Script::SimplifiedChinese => &["SC", "GB"],
         Script::TraditionalChinese => &["TC", "HK", "CNS"],
         Script::Korean => &["KR", "Korean"],
+        Script::Thai => &[],
     };
     let files: Vec<PathBuf> = if cfg!(windows) {
         let dir = windows_fonts();
@@ -227,6 +244,8 @@ fn candidates(script: Script, family: ChineseFamily, bold: bool) -> Vec<Candidat
             },
             Script::TraditionalChinese => &["msjh.ttc", "mingliu.ttc", "msyh.ttc"],
             Script::Korean => &["malgun.ttf", "gulim.ttc"],
+            Script::Thai if bold => &["tahomabd.ttf", "LeelaUIb.ttf", "tahoma.ttf"],
+            Script::Thai => &["tahoma.ttf", "LeelawUI.ttf"],
         };
         names.iter().map(|f| dir.join(f)).collect()
     } else if cfg!(target_os = "macos") {
@@ -235,6 +254,8 @@ fn candidates(script: Script, family: ChineseFamily, bold: bool) -> Vec<Candidat
             Script::SimplifiedChinese => &["PingFang.ttc", "Hiragino Sans GB.ttc", "STHeiti Light.ttc"],
             Script::TraditionalChinese => &["PingFang.ttc", "STHeiti Light.ttc", "Hiragino Sans GB.ttc"],
             Script::Korean => &["AppleSDGothicNeo.ttc", "AppleGothic.ttf", "PingFang.ttc"],
+            Script::Thai if bold => &["Supplemental/Tahoma Bold.ttf", "Supplemental/Tahoma.ttf", "Supplemental/SukhumvitSet.ttc"],
+            Script::Thai => &["Supplemental/Tahoma.ttf", "Supplemental/SukhumvitSet.ttc"],
         };
         // The system folder first, then the downloaded font assets: on recent macOS a face such as
         // PingFang lives in `/System/Library/AssetsV2/com_apple_MobileAsset_Font*/<id>.asset/AssetData`.
@@ -263,6 +284,13 @@ fn candidates(script: Script, family: ChineseFamily, bold: bool) -> Vec<Candidat
                 "google-droid-sans-fonts/DroidSansFallbackFull.ttf",
                 "truetype/arphic/uming.ttc",
                 "arphic-uming/uming.ttc",
+            ],
+            Script::Thai => &[
+                "truetype/noto/NotoSansThai-Regular.ttf",
+                "noto/NotoSansThai-Regular.ttf",
+                "google-noto/NotoSansThai-Regular.ttf",
+                "truetype/tlwg/Loma.ttf",
+                "truetype/thai/Loma.ttf",
             ],
         };
         ["/usr/share/fonts", "/usr/local/share/fonts"].iter().flat_map(|dir| names.iter().map(move |f| Path::new(dir).join(f))).collect()
@@ -303,7 +331,19 @@ fn windows_fonts() -> PathBuf {
 mod tests {
     use super::*;
 
-    const SCRIPTS: [Script; 4] = [Script::Japanese, Script::SimplifiedChinese, Script::TraditionalChinese, Script::Korean];
+    const SCRIPTS: [Script; 5] = [Script::Japanese, Script::SimplifiedChinese, Script::TraditionalChinese, Script::Korean, Script::Thai];
+
+    /// Standard, spaced and subset-prefixed Thai font names are recognized; a Latin or Chinese
+    /// font keeps its standard substitute.
+    #[test]
+    fn thai_typefaces_are_known_by_name() {
+        for name in ["Tahoma", "ABCDEF+Tahoma-Bold", "THSarabunNew", "TH SarabunPSK", "AngsanaNew", "Leelawadee UI", "NotoSansThai-Regular"] {
+            assert!(names_thai_family(name), "{name}");
+        }
+        for name in ["Helvetica", "ArialMT", "TimesNewRomanPSMT", "MicrosoftYaHei"] {
+            assert!(!names_thai_family(name), "{name}");
+        }
+    }
 
     /// Standard, localized and subset-prefixed names retain their Chinese family hint;
     /// unrelated Latin names and generic YaHei requests use the default candidate list.

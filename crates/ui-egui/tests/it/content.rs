@@ -400,8 +400,10 @@ fn typing_thai_text_keeps_marks_and_commits_to_page() {
         return;
     }
     let fonts = pdfcraft_ui_egui::theme::font_definitions();
-    let face = pdfcraft_fonts::document_thai_font().unwrap();
-    assert!(fonts.families[&egui::FontFamily::Proportional].contains(&face.name()));
+    // An installed document face is not an interface font.
+    for face in pdfcraft_fonts::ui_thai_fonts() {
+        assert!(fonts.families[&egui::FontFamily::Proportional].contains(&face.name()));
+    }
     let mut h = harness();
     assert!(h.state_mut().execute("edit.text"));
     h.run_steps(2);

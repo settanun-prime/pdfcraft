@@ -142,7 +142,7 @@ fn japanese_fallback(query: &FontQuery) -> Option<(FontData, u32)> {
 
 /// An installed face for a CID font of an Adobe CJK collection that the PDF doesn't embed and
 /// craft-fonts has no face for (Traditional and Simplified Chinese, Korean, and Japanese in a
-/// build without craft-fonts). `None` for every other font.
+/// build without craft-fonts), or for one named after a Thai typeface. `None` for every other font.
 fn system_fallback(query: &FontQuery) -> Option<(FontData, u32)> {
     let FontQuery::Fallback(f) = query else { return None };
     crate::system_font::fallback(f)

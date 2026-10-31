@@ -76,6 +76,24 @@ impl FontResolver<'_> {
         self.embed_face(key, &bytes, &family, "the source font could not be loaded").map(Some)
     }
 
+    /// A complete Thai document face for a `draft` with Thai the page's fonts can't show. The whole
+    /// draft takes it, as if the face had been loaded by hand: contextual text can't change font
+    /// within a row. `None` when the page's fonts show it, or no face has every character.
+    fn thai_face(&mut self, source: &TextLine, draft: &str) -> Result<Option<String>, EditError> {
+        for ch in draft.chars().filter(|c| matches!(c, '\u{0E00}'..='\u{0E7F}')) {
+            if self.encodable_font(source, &ch.to_string(), None)?.is_some() {
+                continue;
+            }
+            for face in [pdfcraft_fonts::document_thai_font(), pdfcraft_fonts::installed_thai_font()].into_iter().flatten() {
+                if pdfcraft_fonts::embedding::validate(face.bytes).is_ok() && pdfcraft_fonts::embedding::covers(face.bytes, draft) {
+                    return self.embed_face(face.name(), face.bytes, face.family, "the Thai font could not be loaded").map(Some);
+                }
+            }
+            return Ok(None);
+        }
+        Ok(None)
+    }
+
     fn embed_face(&mut self, key: String, bytes: &[u8], family: &str, missing_message: &str) -> Result<String, EditError> {
         if let Some(name) = self.full_faces.get(&key) {
             return Ok(name.clone());
@@ -128,6 +146,11 @@ impl CharacterPreparation<'_> {
         let mut substituted = None;
         let mut fallback = FallbackBuilder::new(max_glyphs);
         let mut resolver = FontResolver { doc, fonts, metrics, full_faces: HashMap::new(), programs: HashMap::new() };
+        let chosen = style.resource.is_some() || overrides.values().any(|range| range.resource.is_some());
+        let thai = if chosen { None } else { resolver.thai_face(first, draft)? };
+        if let Some(name) = &thai {
+            substituted = resolver.metrics.get(name).map(|metrics| metrics.base_font.clone());
+        }
         for (range, index) in spans {
             let source = lines.get(index).unwrap_or(first);
             let start = range.start;
@@ -143,7 +166,9 @@ impl CharacterPreparation<'_> {
                 }
                 let text = ch.to_string();
                 let requested = overrides.get(&index).and_then(|range| range.resource.as_deref()).or(style.resource.as_deref());
-                let name = if let Some(name) = resolver.encodable_font(source, &text, requested)? {
+                let name = if let Some(name) = &thai {
+                    name.clone()
+                } else if let Some(name) = resolver.encodable_font(source, &text, requested)? {
                     name
                 } else if needs_type3(&text) {
                     fallback.prepare(source, ch, &text, chars.len())?
@@ -567,7 +592,8 @@ fn apply_range_styles<'a>(
     StyledLines { lines: styled_lines, spans: styled_spans, underlines, overrides }
 }
 
-/// Shape in the source or an explicitly registered matching full face. Never use interface fonts.
+/// Shape in the source or an explicitly registered matching full face, then, for Thai a subset
+/// can't show, in a complete Thai document face. Never use interface fonts.
 fn shape_source(
     doc: &Document,
     fonts: &Dict,
@@ -593,6 +619,17 @@ fn shape_source(
             && let Ok(shaped) = pdfcraft_fonts::source_shaping::shape(&bytes, text)
         {
             return Ok(Some((bytes, shaped, family)));
+        }
+    }
+    if text.chars().any(|c| matches!(c, '\u{0E00}'..='\u{0E7F}')) {
+        // The embedded craft-fonts face may be a variable font, which `validate` refuses.
+        for face in [pdfcraft_fonts::document_thai_font(), pdfcraft_fonts::installed_thai_font()].into_iter().flatten() {
+            if pdfcraft_fonts::embedding::validate(face.bytes).is_ok()
+                && pdfcraft_fonts::embedding::covers(face.bytes, text)
+                && let Ok(shaped) = pdfcraft_fonts::source_shaping::shape(face.bytes, text)
+            {
+                return Ok(Some((face.bytes.to_vec(), shaped, face.family.to_owned())));
+            }
         }
     }
     Err(EditError::Invalid("complex text needs the complete source TrueType/OpenType face; load that font before editing".into()))

@@ -4,9 +4,10 @@
 //! only draws characters none of them has, such as an Arabic file name in a build without
 //! craft-fonts, or the Simplified Chinese interface in a build without a `Hans` face (#826). A
 //! few more installed faces, [`devanagari_fallback`], [`telugu_fallback`], [`sinhala_fallback`],
-//! [`tamil_fallback`], [`hebrew_fallback`] and [`hangul_fallback`], draw Hindi, Telugu, Sinhala,
-//! Tamil, Hebrew and Korean when one is installed. It is read at runtime and never embedded or
-//! shipped (AGENTS.md §1.4), and `PDFCRAFT_SYSTEM_FONTS=0` turns it off (published screenshots do).
+//! [`tamil_fallback`], [`hebrew_fallback`], [`hangul_fallback`] and [`thai_fallback`], draw Hindi,
+//! Telugu, Sinhala, Tamil, Hebrew, Korean and Thai when one is installed. It is read at runtime and
+//! never embedded or shipped (AGENTS.md §1.4), and `PDFCRAFT_SYSTEM_FONTS=0` turns it off (published
+//! screenshots do).
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
@@ -34,6 +35,8 @@ const SINHALA_PROBE: char = '\u{0D9A}';
 const TAMIL_PROBE: char = '\u{0B95}';
 /// Hebrew letter alef: the face must have it to cover Hebrew.
 const HEBREW_PROBE: char = '\u{05D0}';
+/// Thai letter ko kai (ก): the face must have it to cover Thai.
+const THAI_PROBE: char = '\u{0E01}';
 /// Hangul syllable hih (힣, U+D7A3), the last of the 11,172 modern syllables: a face with it has
 /// the whole block. Droid Sans Fallback, for one, has 가 but few other syllables.
 const HANGUL_PROBE: char = '\u{D7A3}';
@@ -122,6 +125,20 @@ pub fn hangul_fallback() -> Option<Arc<FontData>> {
     CACHE.get_or_init(|| script_fallback(&hangul_candidates(), HANGUL_PROBE)).clone()
 }
 
+/// The installed fallback face for Thai, read once. `None` when it is turned off or no candidate
+/// is installed; the interface then draws what the embedded faces can.
+pub fn thai_fallback() -> Option<Arc<FontData>> {
+    static CACHE: OnceLock<Option<Arc<FontData>>> = OnceLock::new();
+    CACHE
+        .get_or_init(|| {
+            if std::env::var_os("PDFCRAFT_SYSTEM_FONTS").is_some_and(|v| v == "0") {
+                return None;
+            }
+            thai_candidates().iter().find_map(|path| read_face(path, MAX_BYTES, thai_face))
+        })
+        .clone()
+}
+
 fn script_fallback(candidates: &[PathBuf], probe: char) -> Option<Arc<FontData>> {
     if std::env::var_os("PDFCRAFT_SYSTEM_FONTS").is_some_and(|v| v == "0") {
         return None;
@@ -138,7 +155,7 @@ fn script_fallback(candidates: &[PathBuf], probe: char) -> Option<Arc<FontData>>
 /// below. On that machine each family below lives in exactly one of the two folders, so their
 /// order is a deterministic choice rather than a tie-break that was ever exercised.
 ///
-/// Only [`macos_devanagari_candidates`] uses this today: in the Telugu, Sinhala and Tamil lists each
+/// Only [`macos_devanagari_candidates`] and [`thai_candidates`] use this: in the Telugu, Sinhala and Tamil lists each
 /// family is named once, in a single folder (some of those lists also name `/Library/Fonts` for the
 /// Unicode face). Their first choices all exist on macOS 26.6, so nothing is dropping there now — the
 /// same two-folder expansion would fit them, and is left for a change that tests it.
@@ -302,6 +319,43 @@ fn hebrew_candidates() -> Vec<PathBuf> {
     }
 }
 
+/// Well-known locations of Thai faces, best first. egui doesn't shape text, so a face has to place
+/// its marks from its character map alone. On macOS that rules out Thonburi, whose marks are spacing
+/// glyphs with a dotted circle until AAT shaping replaces them, and puts Sukhumvit Set and Sathu,
+/// whose tone marks clear the upper vowels, before Tahoma, whose tone marks sit on them.
+fn thai_candidates() -> Vec<PathBuf> {
+    if cfg!(windows) {
+        ["LeelawUI.ttf", "tahoma.ttf"].iter().map(|f| windows_fonts().join(f)).collect()
+    } else if cfg!(target_os = "macos") {
+        macos_candidates(&["SukhumvitSet.ttc", "Sathu.ttf", "Silom.ttf", "Tahoma.ttf"])
+    } else {
+        unix_fonts(&[
+            "google-noto/NotoSansThai-Regular.ttf",
+            "google-noto/NotoSansThaiUI-Regular.ttf",
+            "google-noto-vf/NotoSansThai[wght].ttf",
+            "truetype/noto/NotoSansThai-Regular.ttf",
+            "truetype/noto/NotoSansThaiUI-Regular.ttf",
+            "noto/NotoSansThai-Regular.ttf",
+            "noto/NotoSansThaiUI-Regular.ttf",
+            "truetype/tlwg/Loma.ttf",
+            "truetype/thai/Loma.ttf",
+        ])
+    }
+}
+
+/// The face of a Thai candidate: "Text" when the file has one (`SukhumvitSet.ttc` starts at Thin),
+/// else the first that maps Thai.
+fn thai_face(bytes: &[u8]) -> Option<u32> {
+    use skrifa::MetadataProvider as _;
+    use skrifa::string::StringId;
+    let text_face = |index: &u32| {
+        skrifa::FontRef::from_index(bytes, *index).is_ok_and(|font| {
+            font.charmap().map(THAI_PROBE).is_some() && font.localized_strings(StringId::SUBFAMILY_NAME).any(|name| name.to_string() == "Text")
+        })
+    };
+    (0..MAX_FACES).find(text_face).or_else(|| face_with(bytes, THAI_PROBE))
+}
+
 /// Well-known locations of faces with broad script coverage, best first.
 fn candidates(need: Need) -> Vec<PathBuf> {
     match need {
@@ -425,12 +479,17 @@ fn unix_candidates(files: &[&str], installed: &[PathBuf]) -> Vec<PathBuf> {
 }
 
 fn read(path: &Path, probe: char, max: u64) -> Option<Arc<FontData>> {
+    read_face(path, max, |bytes| face_with(bytes, probe))
+}
+
+/// The face `pick` chooses in the file at `path`, a regular file of at most `max` bytes.
+fn read_face(path: &Path, max: u64, pick: impl Fn(&[u8]) -> Option<u32>) -> Option<Arc<FontData>> {
     let meta = std::fs::metadata(path).ok()?;
     if !meta.is_file() || meta.len() > max {
         return None;
     }
     let bytes = std::fs::read(path).ok()?;
-    let index = face_with(&bytes, probe)?;
+    let index = pick(bytes.as_slice())?;
     let mut data = FontData::from_owned(bytes);
     data.index = index;
     log::info!("interface font fallback: {} (face {index})", path.display());
@@ -541,12 +600,20 @@ mod tests {
         assert!(script_fallback(&candidates, SINHALA_PROBE).is_none());
         assert!(script_fallback(&candidates, TAMIL_PROBE).is_none());
         assert!(script_fallback(&candidates, HEBREW_PROBE).is_none());
+        assert!(script_fallback(&candidates, THAI_PROBE).is_none());
     }
 
     #[test]
     fn script_candidates_are_absolute_font_files() {
-        for list in [devanagari_candidates(), telugu_candidates(), sinhala_candidates(), tamil_candidates(), hebrew_candidates(), hangul_candidates()]
-        {
+        for list in [
+            devanagari_candidates(),
+            telugu_candidates(),
+            sinhala_candidates(),
+            tamil_candidates(),
+            hebrew_candidates(),
+            hangul_candidates(),
+            thai_candidates(),
+        ] {
             assert!(!list.is_empty());
             assert!(list.iter().all(|p| p.is_absolute() || cfg!(windows)), "{list:?}");
             assert!(list.iter().all(|p| p.extension().is_some_and(|e| e == "ttf" || e == "ttc")), "{list:?}");
@@ -563,6 +630,29 @@ mod tests {
         // Inter has no Hangul.
         let inter = include_bytes!("../../../../assets/fonts/Inter-Regular.ttf");
         assert_eq!(face_with(inter, HANGUL_PROBE), None);
+    }
+
+    #[test]
+    fn a_thai_face_must_have_thai() {
+        // Inter has no Thai.
+        let inter = include_bytes!("../../../../assets/fonts/Inter-Regular.ttf");
+        assert_eq!(thai_face(inter), None);
+        assert_eq!(thai_face(b"not a font at all"), None);
+    }
+
+    /// Sukhumvit Set starts at Thin, which is too light for the interface; Text is the body face.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn a_mac_draws_thai_in_sukhumvit_text_not_thin() {
+        use skrifa::MetadataProvider as _;
+        use skrifa::string::StringId;
+        let Some(bytes) = macos_candidates(&["SukhumvitSet.ttc"]).iter().find_map(|path| std::fs::read(path).ok()) else {
+            eprintln!("Sukhumvit Set is not installed here: skipped");
+            return;
+        };
+        let index = thai_face(&bytes).expect("Sukhumvit Set covers Thai");
+        let font = skrifa::FontRef::from_index(&bytes, index).expect("the chosen face parses");
+        assert!(font.localized_strings(StringId::SUBFAMILY_NAME).any(|name| name.to_string() == "Text"), "face {index}");
     }
 
     /// Retune tripwires, deliberately separate from `the_macos_devanagari_list_is_apples_layout` below: these assert that three
