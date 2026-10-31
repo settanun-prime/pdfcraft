@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+"""Check that this fork's changes survived a merge from upstream. Needs no build.
+
+    python3 packaging/custom-check.py [folder]
+
+A clean merge can still undo them: upstream can add a new promotion, or change the code they rely
+on, with no conflict. Run this after every `git merge main`. It exits 1 and says what came back or
+went missing. CUSTOM.md says how to put each one right.
+"""
+import hashlib
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent
+
+HOME = "crates/ui-egui/src/home.rs"
+CHROME = "crates/ui-egui/src/chrome.rs"
+LIB = "crates/ui-egui/src/lib.rs"
+APP = "crates/ui-egui/src/app.rs"
+CRAFT = "crates/fonts/src/craft.rs"
+UI_FONTS = "crates/ui-egui/src/platform/system_fonts.rs"
+THEME = "crates/ui-egui/src/theme.rs"
+EDIT = "crates/edit/src/text_regions/styled.rs"
+VIEWER = "crates/render/src/system_font.rs"
+ICON = "assets/app-icon/pdfcraft.svg"
+
+# Promotions: none of these may be on the home screen or in the title bar.
+PROMOTION = re.compile(r"discord|community|sponsor|donat|join (the|our)|newsletter", re.IGNORECASE)
+
+ABSENT = [
+    (LIB, "community_card_closed", "the community card's state is back"),
+    (APP, "community_card_closed", "the community card's state is back"),
+    (UI_FONTS, "Thonburi.ttc", "Thonburi is listed for the interface; its marks show dotted circles without shaping"),
+]
+
+PRESENT = [
+    (CRAFT, ".or_else(installed_thai_font)", "writing Thai no longer falls back to an installed font"),
+    (CRAFT, "fn standalone_face", "a face can't be taken out of a .ttc any more"),
+    (CRAFT, '"Sarabun.ttc"', "Sarabun is gone from the Thai document fonts"),
+    (UI_FONTS, "fn thai_fallback", "the interface has no installed Thai font"),
+    (UI_FONTS, "fn thai_face", "the Thai interface face is no longer picked by style, so Sukhumvit Set draws in Thin"),
+    (UI_FONTS, 'macos_candidates(&["SukhumvitSet.ttc"', "Sukhumvit Set no longer comes first for the interface"),
+    (THEME, "thai_fallback()", "the installed Thai font is not on the interface"),
+    (EDIT, "resolver.thai_face(first, draft)", "Edit Text no longer picks a Thai face for the paragraph"),
+    (EDIT, "pdfcraft_fonts::source_shaping::shape(face.bytes, text)", "shape_source no longer falls back to a Thai face"),
+    (VIEWER, "names_thai_family", "PDFs that don't embed a Thai font no longer use an installed one"),
+    (VIEWER, '&["Supplemental/SukhumvitSet.ttc", "Supplemental/Sathu.ttf"', "Sukhumvit Set no longer comes first in the viewer; tone marks disappear without it"),
+    (ICON, 'id="thai-badge"', "the app icon has no TH badge"),
+]
+
+
+def read(name):
+    path = ROOT / name
+    return path.read_text(encoding="utf-8") if path.is_file() else None
+
+
+def promotions(name):
+    """Promotion words in code the app draws. Comments don't draw anything."""
+    text = read(name)
+    if text is None:
+        return [f"{name} is missing"]
+    found = []
+    for number, line in enumerate(text.splitlines(), 1):
+        code = line.split("//", 1)[0]
+        if PROMOTION.search(code):
+            found.append(f"{name}:{number} looks like a promotion: {code.strip()[:80]}")
+    return found
+
+
+def icon_hashes():
+    """The stamped icons have to be the ones ATTRIBUTION.toml records."""
+    manifest = read("ATTRIBUTION.toml")
+    if manifest is None:
+        return ["ATTRIBUTION.toml is missing"]
+    found = []
+    for name in ("assets/app-icon/pdfcraft-1024.png", "assets/app-icon/pdfcraft.icns", "assets/app-icon/pdfcraft.svg"):
+        path = ROOT / name
+        match = re.search(r'path = "' + re.escape(name) + r'"\n(?:(?!\[\[asset\]\]).*\n)*?sha256 = "([0-9a-f]{64})"', manifest)
+        if not path.is_file() or match is None:
+            found.append(f"{name} is missing, or has no sha256 in ATTRIBUTION.toml")
+        elif hashlib.sha256(path.read_bytes()).hexdigest() != match.group(1):
+            found.append(f"{name} doesn't match its sha256 in ATTRIBUTION.toml")
+    return found
+
+
+def main():
+    problems = promotions(HOME) + promotions(CHROME)
+    for name, needle, message in ABSENT:
+        text = read(name)
+        if text is None or needle in text:
+            problems.append(f"{name}: {message}")
+    for name, needle, message in PRESENT:
+        text = read(name)
+        if text is None or needle not in text:
+            problems.append(f"{name}: {message}")
+    problems += icon_hashes()
+    if problems:
+        print(f"custom-check: {len(problems)} problem(s), see CUSTOM.md")
+        for problem in problems:
+            print(f"  - {problem}")
+        return 1
+    print(f"custom-check: ok ({len(PRESENT) + len(ABSENT) + 5} checks)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

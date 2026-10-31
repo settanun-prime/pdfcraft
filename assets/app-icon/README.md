@@ -47,6 +47,10 @@ reader; the app keeps resource 1. The document outline is adapted from Lucide `f
 [LICENSE-document.txt](LICENSE-document.txt). Both icons are embedded, requiring no runtime
 sidecar. This provides a file type icon; first-page thumbnails still need a thumbnail provider.
 
+## TH badge (this fork)
+
+`packaging/thai-badge.py` stamps a TH badge on the stock icons, the vectors and every rendered size. It is drawn from rectangles in the palette above, so it needs no font. To take new icons from upstream, restore them, run the script, then `cargo xtask assets --write`. The script refuses icons that already have the badge.
+
 ## Regenerate
 
 ```sh

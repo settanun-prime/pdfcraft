@@ -85,6 +85,10 @@ const THAI_PROBE: &str = "กฮำ่๑";
 
 /// The largest installed face read, which is also what [`crate::embedding::validate`] accepts.
 const MAX_INSTALLED_BYTES: u64 = 16 << 20;
+/// Faces looked at in an installed collection (`.ttc`).
+const MAX_COLLECTION_FACES: u32 = 32;
+/// Downloaded font assets looked at per kind on macOS.
+const MAX_FONT_ASSETS: usize = 512;
 
 /// A Thai face already installed on this machine, read once. Text written with it carries the
 /// face's outlines into the PDF, unlike every other installed face, so only a standalone face
@@ -100,14 +104,16 @@ pub fn installed_thai_font() -> Option<&'static CraftFont> {
     .as_ref()
 }
 
-/// The face at `path` when it is a regular file that shows Thai and may be embedded. Its bytes
-/// live as long as the process: this runs once, and [`CraftFont`] holds static data.
+/// The face at `path` when it is a regular file that shows Thai and may be embedded, the Regular
+/// one of a collection. Its bytes live as long as the process: this runs once, and [`CraftFont`]
+/// holds static data.
 fn read_thai_face(path: &Path) -> Option<CraftFont> {
     let meta = std::fs::metadata(path).ok()?;
     if !meta.is_file() || meta.len() > MAX_INSTALLED_BYTES {
         return None;
     }
     let bytes = std::fs::read(path).ok()?;
+    let bytes = if bytes.starts_with(b"ttcf") { standalone_face(&bytes, regular_face(&bytes)?)? } else { bytes };
     if !crate::embedding::covers(&bytes, THAI_PROBE) {
         return None;
     }
@@ -118,9 +124,67 @@ fn read_thai_face(path: &Path) -> Option<CraftFont> {
     Some(CraftFont { family, style: "Regular", scripts: &["Thai"], bytes })
 }
 
+/// The Regular face of a collection. Its full name says so: Sarabun's Medium and Thin faces call
+/// themselves Regular too, each in a family of its own.
+fn regular_face(bytes: &[u8]) -> Option<u32> {
+    use skrifa::MetadataProvider as _;
+    use skrifa::string::StringId;
+    (0..MAX_COLLECTION_FACES).find(|&index| {
+        skrifa::FontRef::from_index(bytes, index).is_ok_and(|font| {
+            font.localized_strings(StringId::FULL_NAME).any(|name| name.to_string().ends_with(" Regular")) && font.charmap().map('\u{0E01}').is_some()
+        })
+    })
+}
+
+/// Face `index` of a collection as a font of its own, for shaping and embedding, which take one
+/// font. Each table is copied whole, so the face draws exactly as it does in the collection.
+fn standalone_face(bytes: &[u8], index: u32) -> Option<Vec<u8>> {
+    const HEADER: usize = 12;
+    const RECORD: usize = 16;
+    let u32_at = |at: usize| Some(u32::from_be_bytes(bytes.get(at..at.checked_add(4)?)?.try_into().ok()?));
+    let directory = u32_at(usize::try_from(index).ok()?.checked_mul(4)?.checked_add(HEADER)?)?;
+    let directory = usize::try_from(directory).ok()?;
+    let head = bytes.get(directory..directory.checked_add(HEADER)?)?;
+    let tables = usize::from(u16::from_be_bytes(head.get(4..6)?.try_into().ok()?));
+    let mut font = head.to_vec();
+    let mut body = Vec::new();
+    let body_start = tables.checked_mul(RECORD)?.checked_add(HEADER)?;
+    for table in 0..tables {
+        let at = table.checked_mul(RECORD)?.checked_add(directory)?.checked_add(HEADER)?;
+        let record = bytes.get(at..at.checked_add(RECORD)?)?;
+        let start = usize::try_from(u32_at(at.checked_add(8)?)?).ok()?;
+        let length = usize::try_from(u32_at(at.checked_add(12)?)?).ok()?;
+        let data = bytes.get(start..start.checked_add(length)?)?;
+        let offset = u32::try_from(body_start.checked_add(body.len())?).ok()?;
+        font.extend_from_slice(record.get(..8)?);
+        font.extend_from_slice(&offset.to_be_bytes());
+        font.extend_from_slice(record.get(12..)?);
+        body.extend_from_slice(data);
+        // Tables start on four-byte boundaries.
+        body.resize(body.len().checked_next_multiple_of(4)?, 0);
+        if u64::try_from(body.len()).ok()? > MAX_INSTALLED_BYTES {
+            return None;
+        }
+    }
+    font.extend_from_slice(&body);
+    Some(font)
+}
+
+/// The `AssetData` folders of the fonts macOS downloads, whose ids change with each asset version.
+fn macos_font_assets() -> Vec<PathBuf> {
+    let Ok(kinds) = std::fs::read_dir("/System/Library/AssetsV2") else { return Vec::new() };
+    kinds
+        .flatten()
+        .filter(|kind| kind.file_name().to_string_lossy().starts_with("com_apple_MobileAsset_Font"))
+        .filter_map(|kind| std::fs::read_dir(kind.path()).ok())
+        .flat_map(|assets| assets.flatten().take(MAX_FONT_ASSETS))
+        .map(|asset| asset.path().join("AssetData"))
+        .collect()
+}
+
 /// Where a Thai document face may be, best first: a document face the user installed, then what
-/// the system ships. Only standalone `.ttf` files: shaping and embedding refuse a collection, which
-/// rules out Thonburi on macOS. Tahoma has the GSUB and GPOS tables shaping needs.
+/// the machine already has. Sarabun comes first on macOS, as a book face; Tahoma is the last
+/// resort. All of them have the GSUB and GPOS tables shaping needs, which rules out Thonburi.
 fn installed_thai_candidates() -> Vec<PathBuf> {
     const DOCUMENT_FACES: &[&str] = &["Sarabun-Regular.ttf", "THSarabunNew.ttf", "NotoSansThai-Regular.ttf"];
     if cfg!(windows) {
@@ -131,6 +195,8 @@ fn installed_thai_candidates() -> Vec<PathBuf> {
         let mut dirs = vec![PathBuf::from("/Library/Fonts")];
         dirs.extend(std::env::var_os("HOME").map(|home| PathBuf::from(home).join("Library/Fonts")));
         let mut paths: Vec<PathBuf> = dirs.iter().flat_map(|dir| DOCUMENT_FACES.iter().map(move |f| dir.join(f))).collect();
+        paths.extend(macos_font_assets().into_iter().map(|dir| dir.join("Sarabun.ttc")));
+        paths.push(PathBuf::from("/Applications/Microsoft Word.app/Contents/Resources/DFonts/thsarabun.ttf"));
         paths.push(PathBuf::from("/System/Library/Fonts/Supplemental/Tahoma.ttf"));
         paths
     } else {
@@ -453,15 +519,53 @@ mod tests {
     }
 
     #[test]
-    fn installed_thai_candidates_are_standalone_absolute_faces() {
+    fn installed_thai_candidates_are_absolute_font_files() {
         let list = installed_thai_candidates();
         assert!(!list.is_empty());
         assert!(list.iter().all(|p| p.is_absolute() || cfg!(windows)), "{list:?}");
-        // A collection could never pass `embedding::validate`.
-        assert!(list.iter().all(|p| p.extension().is_some_and(|e| e == "ttf")), "{list:?}");
+        assert!(list.iter().all(|p| p.extension().is_some_and(|e| e == "ttf" || e == "ttc")), "{list:?}");
     }
 
-    /// macOS ships Tahoma, so here writing Thai needs no craft-fonts.
+    /// `font` as a one-face collection: a header and the table offsets moved past it.
+    fn one_face_collection(font: &[u8]) -> Vec<u8> {
+        const SHIFT: u32 = 16;
+        let tables = usize::from(u16::from_be_bytes([font[4], font[5]]));
+        let mut face = font.to_vec();
+        for table in 0..tables {
+            let at = 12 + table * 16 + 8;
+            let offset = u32::from_be_bytes(face[at..at + 4].try_into().unwrap());
+            face[at..at + 4].copy_from_slice(&(offset + SHIFT).to_be_bytes());
+        }
+        let mut collection = b"ttcf\x00\x01\x00\x00\x00\x00\x00\x01".to_vec();
+        collection.extend_from_slice(&SHIFT.to_be_bytes());
+        collection.extend_from_slice(&face);
+        collection
+    }
+
+    #[test]
+    fn a_face_comes_out_of_a_collection_whole() {
+        use skrifa::MetadataProvider as _;
+        let inter = crate::INTER_REGULAR;
+        let collection = one_face_collection(inter);
+        assert!(skrifa::FontRef::new(&collection).is_err(), "a collection is not one font");
+        let face = standalone_face(&collection, 0).expect("the only face");
+        let font = skrifa::FontRef::new(&face).expect("a font of its own");
+        let source = skrifa::FontRef::new(inter).unwrap();
+        assert_eq!(font.charmap().map('A'), source.charmap().map('A'));
+        assert_eq!(crate::embedding::names(&face).map(|(family, _)| family), crate::embedding::names(inter).map(|(family, _)| family));
+    }
+
+    #[test]
+    fn a_broken_collection_gives_no_face() {
+        let collection = one_face_collection(crate::INTER_REGULAR);
+        assert!(standalone_face(&collection, 1).is_none(), "no second face");
+        assert!(standalone_face(&collection[..64], 0).is_none(), "tables cut off");
+        assert!(standalone_face(b"ttcf", 0).is_none());
+        assert!(standalone_face(b"", 0).is_none());
+        assert!(regular_face(b"ttcf").is_none());
+    }
+
+    /// Writing Thai on a Mac needs no craft-fonts: at the least, macOS ships Tahoma.
     #[cfg(target_os = "macos")]
     #[test]
     fn a_mac_writes_thai_with_an_installed_embeddable_face() {
@@ -472,5 +576,20 @@ mod tests {
         assert!(crate::embedding::validate(face.bytes).is_ok());
         assert!(crate::embedding::covers(face.bytes, "น้ำ กิ่ ผู้ใช้ ๑๒๓ Hello"));
         assert!(face.covers("Thai"));
+    }
+
+    /// macOS downloads Sarabun as a collection. Its Regular face has to come out, not a lighter
+    /// one that also calls itself Regular.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn a_mac_with_sarabun_writes_thai_in_its_regular_face() {
+        let Some(path) = macos_font_assets().into_iter().map(|dir| dir.join("Sarabun.ttc")).find(|path| path.is_file()) else {
+            eprintln!("Sarabun has not been downloaded here: skipped");
+            return;
+        };
+        let face = read_thai_face(&path).expect("the collection's Regular face");
+        assert_eq!(face.family, "Sarabun");
+        assert!(crate::embedding::validate(face.bytes).is_ok());
+        assert!(crate::embedding::covers(face.bytes, "น้ำ กิ่ ผู้ใช้ ๑๒๓ Hello"));
     }
 }

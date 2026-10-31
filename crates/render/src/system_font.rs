@@ -244,8 +244,9 @@ fn candidates(script: Script, family: ChineseFamily, bold: bool) -> Vec<Candidat
             },
             Script::TraditionalChinese => &["msjh.ttc", "mingliu.ttc", "msyh.ttc"],
             Script::Korean => &["malgun.ttf", "gulim.ttc"],
-            Script::Thai if bold => &["tahomabd.ttf", "LeelaUIb.ttf", "tahoma.ttf"],
-            Script::Thai => &["tahoma.ttf", "LeelawUI.ttf"],
+            // Tahoma last, as on macOS: without shaping its tone marks disappear.
+            Script::Thai if bold => &["LeelaUIb.ttf", "LeelawUI.ttf", "tahomabd.ttf"],
+            Script::Thai => &["LeelawUI.ttf", "tahoma.ttf"],
         };
         names.iter().map(|f| dir.join(f)).collect()
     } else if cfg!(target_os = "macos") {
@@ -254,8 +255,9 @@ fn candidates(script: Script, family: ChineseFamily, bold: bool) -> Vec<Candidat
             Script::SimplifiedChinese => &["PingFang.ttc", "Hiragino Sans GB.ttc", "STHeiti Light.ttc"],
             Script::TraditionalChinese => &["PingFang.ttc", "STHeiti Light.ttc", "Hiragino Sans GB.ttc"],
             Script::Korean => &["AppleSDGothicNeo.ttc", "AppleGothic.ttf", "PingFang.ttc"],
-            Script::Thai if bold => &["Supplemental/Tahoma Bold.ttf", "Supplemental/Tahoma.ttf", "Supplemental/SukhumvitSet.ttc"],
-            Script::Thai => &["Supplemental/Tahoma.ttf", "Supplemental/SukhumvitSet.ttc"],
+            // Nothing shapes a substitute, so its marks stay where its character map puts them:
+            // Tahoma's tone marks vanish into upper vowels and tall letters, Sukhumvit Set's clear them.
+            Script::Thai => &["Supplemental/SukhumvitSet.ttc", "Supplemental/Sathu.ttf", "Supplemental/Tahoma.ttf"],
         };
         // The system folder first, then the downloaded font assets: on recent macOS a face such as
         // PingFang lives in `/System/Library/AssetsV2/com_apple_MobileAsset_Font*/<id>.asset/AssetData`.
@@ -342,6 +344,17 @@ mod tests {
         }
         for name in ["Helvetica", "ArialMT", "TimesNewRomanPSMT", "MicrosoftYaHei"] {
             assert!(!names_thai_family(name), "{name}");
+        }
+    }
+
+    /// A substitute isn't shaped, and Tahoma's tone marks disappear without shaping ("ที่" draws as
+    /// "ที"), so on macOS it must not come first even for a PDF that names Tahoma.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_draws_thai_in_a_face_that_needs_no_shaping() {
+        for bold in [false, true] {
+            let list = candidates(Script::Thai, ChineseFamily::Default, bold);
+            assert!(list.first().is_some_and(|c| c.path.ends_with("SukhumvitSet.ttc")), "bold {bold}");
         }
     }
 
