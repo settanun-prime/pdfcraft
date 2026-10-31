@@ -24,6 +24,12 @@ THEME = "crates/ui-egui/src/theme.rs"
 EDIT = "crates/edit/src/text_regions/styled.rs"
 VIEWER = "crates/render/src/system_font.rs"
 ICON = "assets/app-icon/pdfcraft.svg"
+WIDGETS = "crates/ui-egui/src/widgets.rs"
+DIALOGS = "crates/ui-egui/src/dialogs.rs"
+COMMANDS = "crates/engine/src/commands.rs"
+LINKS = "crates/engine/src/links.rs"
+README = "README.md"
+ATTR = "ATTRIBUTION.toml"
 
 # Promotions: none of these may be on the home screen or in the title bar.
 PROMOTION = re.compile(r"discord|community|sponsor|donat|join (the|our)|newsletter", re.IGNORECASE)
@@ -31,10 +37,22 @@ PROMOTION = re.compile(r"discord|community|sponsor|donat|join (the|our)|newslett
 ABSENT = [
     (LIB, "community_card_closed", "the community card's state is back"),
     (APP, "community_card_closed", "the community card's state is back"),
+    (WIDGETS, "artcraft_logo", "the ArtCraft wordmark is drawn again"),
+    (WIDGETS, "artcraft_mark", "the ArtCraft mark is drawn again"),
+    (DIALOGS, "artcraft_", "the About dialog draws an ArtCraft mark again"),
+    (COMMANDS, "help.discord", "the Help menu has a Discord entry again"),
+    (COMMANDS, "help.website", "the Help menu has an ArtCraft website entry again"),
+    (LINKS, "discord.gg", "the links table points to Discord again"),
+    (ATTR, 'path = "docs/brand/', "ATTRIBUTION.toml lists the ArtCraft logos again"),
+    (ATTR, 'path = "docs/images/pdfcraft-tools.png"', "ATTRIBUTION.toml lists the screenshot that shows the ArtCraft mark again"),
+    (README, "docs/brand", "the README shows the ArtCraft logos again; keep this edition's own README"),
+    (README, "discord.gg/artcraft", "the README promotes the community again; keep this edition's own README"),
+    (CRAFT, "PathBuf::from(\"/Applications/Microsoft Word.app", "a Microsoft font is a candidate for writing into PDFs again"),
     (UI_FONTS, "Thonburi.ttc", "Thonburi is listed for the interface; its marks show dotted circles without shaping"),
 ]
 
 PRESENT = [
+    (CRAFT, "validate_document_input(&bytes)", "an installed Thai font no longer has to declare an open licence before it is written into a PDF"),
     (CRAFT, ".or_else(installed_thai_font)", "writing Thai no longer falls back to an installed font"),
     (CRAFT, "fn standalone_face", "a face can't be taken out of a .ttc any more"),
     (CRAFT, '"Sarabun.ttc"', "Sarabun is gone from the Thai document fonts"),
@@ -68,6 +86,14 @@ def promotions(name):
     return found
 
 
+GONE = ["docs/brand", "docs/images/pdfcraft-tools.png"]
+
+
+def brand_files():
+    """The ArtCraft logos and the screenshot that shows them must not be in this edition."""
+    return [f"{name} is back; remove it, this edition carries no ArtCraft mark" for name in GONE if (ROOT / name).exists()]
+
+
 def icon_hashes():
     """The stamped icons have to be the ones ATTRIBUTION.toml records."""
     manifest = read("ATTRIBUTION.toml")
@@ -94,13 +120,13 @@ def main():
         text = read(name)
         if text is None or needle not in text:
             problems.append(f"{name}: {message}")
-    problems += icon_hashes()
+    problems += icon_hashes() + brand_files()
     if problems:
         print(f"custom-check: {len(problems)} problem(s), see CUSTOM.md")
         for problem in problems:
             print(f"  - {problem}")
         return 1
-    print(f"custom-check: ok ({len(PRESENT) + len(ABSENT) + 5} checks)")
+    print(f"custom-check: ok ({len(PRESENT) + len(ABSENT) + len(GONE) + 5} checks)")
     return 0
 
 

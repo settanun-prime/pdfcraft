@@ -13,3 +13,6 @@
 *.ico binary
 *.png binary
 *.brotli binary
+
+# This edition has its own README. A merge keeps ours (needs: git config merge.ours.driver true).
+README.md merge=ours

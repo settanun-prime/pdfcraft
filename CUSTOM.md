@@ -1,10 +1,11 @@
-# PdfCraft ฉบับปรับแต่งของเรา
+# PdfCraft TH: ฉบับปรับแต่งของเรา
 
-Branch `custom/thai-no-ads` เพิ่มสามเรื่องจากต้นทาง ([storytold/pdfcraft](https://github.com/storytold/pdfcraft)):
+Branch `custom/thai-no-ads` เพิ่มสี่เรื่องจากต้นทาง ([storytold/pdfcraft](https://github.com/storytold/pdfcraft)):
 
 1. อ่านและเขียนภาษาไทยด้วย font ที่มีในเครื่อง ไม่เป็น `[]`
 2. เอาการ์ด "Join the ArtCraft community" บนหน้า Home และปุ่ม Discord บนแถบด้านบนออก
 3. ติดป้าย TH บนไอคอนแอป เพื่อให้รู้ว่าเป็นเวอร์ชันไทย
+4. เอาชื่อและโลโก้ ArtCraft ออกจากแอป เมนู CLI README และโฟลเดอร์ `docs/brand` ตามที่ต้นทางกำหนดไว้สำหรับ fork ที่แก้ไข
 
 **สถานะ (2026-10-31):** build และทดสอบผ่านบน macOS แล้ว ยังไม่เคย build หรือทดสอบบน Windows
 
@@ -14,9 +15,30 @@ Branch `custom/thai-no-ads` เพิ่มสามเรื่องจาก�
 - งานปรับแต่งทั้งหมดอยู่บน `custom/thai-no-ads`
 - ถ้าหน้า GitHub ขึ้นปุ่ม **Discard commits** ห้ามกด
 - ใช้แอปที่ build จาก branch นี้เท่านั้น ปุ่มเช็กอัปเดตในแอปชี้ไปที่ release ของต้นทาง ซึ่งไม่มีของที่เราแก้
-- ไม่ส่ง branch นี้เป็น PR ไปต้นทาง เพราะการฝัง font ที่ติดตั้งในเครื่องลง PDF ขัดกับ `AGENTS.md`
+- ไม่ส่ง branch นี้เป็น PR ไปต้นทาง เพราะเรากำหนดให้ฝัง font ที่ติดตั้งในเครื่อง (แม้เป็น OFL) ลง PDF ซึ่งขัดกับ `AGENTS.md` §1.4 ของต้นทาง และเราเอาแบรนด์ออก
+
+## ใบอนุญาต
+
+นี่คือสรุปของสิ่งที่เราตรวจและทำ ไม่ใช่คำแนะนำทางกฎหมาย
+
+| เรื่อง | กติกา | สิ่งที่เราทำ |
+|---|---|---|
+| โค้ด | MIT OR Apache-2.0 แก้ได้ แจกต่อได้ ต้องเก็บประกาศลิขสิทธิ์ไว้ | ไม่แตะ `LICENSE-MIT`, `LICENSE-APACHE`, `NOTICE` รายการสิ่งที่แก้อยู่ในไฟล์นี้ |
+| ไอคอนสิงโต | MIT OR Apache-2.0 (`assets/app-icon/LICENSE.txt`) แก้ได้ | ติดป้าย TH ด้วย `packaging/thai-badge.py` ป้ายวาดเองจากสี่เหลี่ยม ไม่ใช้ font |
+| ชื่อและโลโก้ ArtCraft | เป็นเครื่องหมายการค้า ไม่ใช่โอเพนซอร์ส ถ้าเผยแพร่เวอร์ชันที่แก้ไขต้องเอาออก (`docs/brand/LICENSE-brand.txt`, `AGENTS.md`, `README.md`, `NOTICE` ของต้นทางเขียนตรงกัน) | เอาโลโก้ รูปที่มีโลโก้ ปุ่ม เมนู และหน้า About ออกหมด README เป็นของเราเอง |
+| คำที่ยังบอกได้ | บอกเป็นข้อความธรรมดาได้ว่า "based on PdfCraft by the ArtCraft team" | หน้า About และ README บอกไว้ และบอกด้วยว่าไม่ใช่ของทางการ ห้ามเขียนว่าทีมนั้นรับรองหรือสนับสนุน |
+| font ตอนแสดงบนจอ | อ่าน font ที่ติดตั้งในเครื่องมาวาดบนจอเป็นเรื่องปกติ ไม่คัดลอก ไม่แจก | ใช้ Sukhumvit Set, Sathu, Tahoma แสดงบนจอเท่านั้น |
+| font ตอนเขียนลง PDF | ลงไปในไฟล์ที่ส่งต่อได้ จึงต้องมีสัญญาเปิด (`embedding::validate_document_input`) | เขียนด้วย Sarabun หรือ Noto Sans Thai (OFL) เท่านั้น Tahoma และ font ที่มากับ Word ไม่ถูกฝัง แม้ font จะอนุญาตให้ฝังก็ตาม |
+
+**ยังไม่ได้ทำความสะอาด** ชื่อ ArtCraft ที่เป็นข้อความธรรมดายังอยู่ใน `packaging/` (installer ของ Windows, metainfo ของ Linux, flatpak, `Credits.rtf`), ไฟล์แปลภาษาใน `crates/ui-egui/src/i18n/`, `AGENTS.md`, `ROADMAP.md` และ `docs/` เราไม่ได้ใช้ไฟล์เหล่านี้ใน `PdfCraft TH.app` ก่อนจะสร้าง installer หรือแจกไฟล์ติดตั้งจาก branch นี้ ต้องแก้ไฟล์ใน `packaging/` ให้ไม่ใช้ชื่อ ArtCraft เป็นผู้เผยแพร่ก่อน
 
 ## เวลาต้นทางมี update
+
+ครั้งแรกบนเครื่องนี้ ตั้งค่าให้ git เก็บ README ของเราไว้เสมอ (คำสั่งนี้เก็บใน `.git/config` ต้องทำใหม่ทุกครั้งที่ clone):
+
+```bash
+git config merge.ours.driver true
+```
 
 1. กด **Sync fork** บนหน้า GitHub ของ fork ตอนที่เลือก branch `main` อยู่
 2. commit งานที่ค้างอยู่บน `custom/thai-no-ads` ให้เรียบร้อย
@@ -56,7 +78,7 @@ git commit --no-edit
 python3 packaging/custom-check.py
 ```
 
-merge ผ่านไม่ได้แปลว่างานเรายังอยู่ เพราะต้นทางอาจเพิ่มการ์ดโปรโมทใหม่หรือเปลี่ยนโค้ดที่เราเรียกใช้โดยไม่เกิด conflict ถ้าสคริปต์ไม่ผ่าน มันจะบอกไฟล์และเรื่องที่ผิด ให้แก้ตามตารางด้านล่างแล้วรันซ้ำ
+merge ผ่านไม่ได้แปลว่างานเรายังอยู่ เพราะต้นทางอาจเพิ่มการ์ดโปรโมทใหม่ เพิ่มโลโก้ หรือเปลี่ยนโค้ดที่เราเรียกใช้โดยไม่เกิด conflict ถ้าสคริปต์ไม่ผ่าน มันจะบอกไฟล์และเรื่องที่ผิด ให้แก้ตามตารางด้านล่างแล้วรันซ้ำ
 
 6. build และตรวจตามหัวข้อ "ตรวจหลัง merge"
 7. push ขึ้น GitHub:
@@ -69,8 +91,9 @@ git push origin custom/thai-no-ads
 
 | ไฟล์ | สิ่งที่แก้ | ถ้าโดน conflict |
 |---|---|---|
-| `crates/fonts/src/craft.rs` | `document_thai_font` ถอยมาใช้ `installed_thai_font` และ `standalone_face` แยก face ออกจาก `.ttc` | เก็บทั้งคู่ไว้ เพราะ shaping และการเขียนลง PDF ไม่รับ `.ttc` โดยตรง ต้องเลือกจากชื่อเต็ม "... Regular" เพราะ Thin กับ Medium ก็เรียกตัวเองว่า Regular |
+| `crates/fonts/src/craft.rs` | `document_thai_font` ถอยมาใช้ `installed_thai_font` ซึ่งต้องผ่าน `validate_document_input`, และ `standalone_face` แยก face ออกจาก `.ttc` | เก็บไว้ทั้งหมด ห้ามเอา Tahoma หรือ font ใน Word เข้ารายการที่จะฝังลง PDF เด็ดขาด เลือก face จากชื่อเต็ม "... Regular" เพราะ Thin กับ Medium ก็เรียกตัวเองว่า Regular |
 | `crates/fonts/src/lib.rs` | export `installed_thai_font` | เก็บชื่อนี้ไว้ในรายการ |
+| `crates/edit/src/added/layout.rs` | ข้อความ error บอกให้ติดตั้ง Sarabun หรือ Noto Sans Thai | เก็บคำว่า `CRAFT_FONTS_DIR` ไว้ เพราะมี test ตรวจ |
 | `crates/ui-egui/src/platform/system_fonts.rs` | `thai_fallback`, `thai_candidates`, `thai_face`, `read_face` | เก็บลำดับ font ของเรา ห้ามใส่ Thonburi เพราะสระจะมีวงกลมประติดมา และต้องเลือก face "Text" ของ Sukhumvit Set ไม่ใช่ Thin |
 | `crates/ui-egui/src/theme.rs` | `SYSTEM_THAI_FALLBACK` ในรายการ font ของเครื่อง | เก็บไว้ ถ้าต้นทางเพิ่มของเหมือนกันให้เหลือชุดเดียว |
 | `crates/edit/src/text_regions/styled.rs` | `thai_face` ใน `FontResolver`, การเลือก font ใน `prepare`, ท้าย `shape_source` | ต้องเก็บทั้งสองจุด: `prepare` ใช้กับตัวอักษรที่ font ใน PDF ไม่มี ส่วน `shape_source` ใช้กับ font ที่ไม่มี GSUB |
@@ -78,17 +101,24 @@ git push origin custom/thai-no-ads
 | `crates/ui-egui/src/home.rs` | ลบการ์ด community | ลบต่อไป แม้ต้นทางจะแก้ข้อความในการ์ด |
 | `crates/ui-egui/src/chrome.rs` | ลบปุ่ม Discord และความกว้างที่กันไว้ให้ปุ่ม | ลบต่อไป `controls_width` ต้องไม่นับปุ่ม Discord |
 | `crates/ui-egui/src/lib.rs`, `crates/ui-egui/src/app.rs` | ลบ field `community_card_closed` | ลบต่อไป |
+| `crates/ui-egui/src/widgets.rs` | ลบ `artcraft_logo` และ `artcraft_mark` เปลี่ยน `community_links` เป็น `project_links` | ลบต่อไป ถ้าต้นทางเพิ่มฟังก์ชันวาดโลโก้ใหม่ให้ลบด้วย |
+| `crates/ui-egui/src/dialogs.rs` | หน้า About ใช้ไอคอน PdfCraft แทนโลโก้ ลบแถว "Part of" และใส่ข้อความว่าไม่ใช่ของทางการ | เก็บไอคอนและข้อความของเรา รับส่วนอื่นของต้นทาง |
+| `crates/engine/src/links.rs`, `crates/engine/src/commands.rs`, `crates/ui-egui/src/menus.rs` | ลบรายการ `help.discord`, `help.website` และค่า `DISCORD`, `WEBSITE` | ลบต่อไป ถ้าต้นทางเพิ่มลิงก์ชุมชนใหม่ให้ลบด้วย |
+| `apps/pdfcraft-cli/src/main.rs` | ลบบรรทัด Discord ใน help และ `--version` | ลบต่อไป |
+| `README.md`, `.gitattributes` | README เป็นของเราเอง และมีบรรทัด `README.md merge=ours` | ไม่ควรโดน conflict ถ้าตั้ง `merge.ours.driver` แล้ว ถ้าโดน ให้เอาของเรา (`git checkout --ours README.md`) |
+| `docs/brand/`, `docs/images/pdfcraft-tools.png` | ลบทิ้ง (ภาพนี้มีโลโก้ติดอยู่) | ถ้าต้นทางแก้ไฟล์เหล่านี้ จะขึ้น modify/delete ให้ลบต่อด้วย `git rm` |
+| `ATTRIBUTION.toml`, `ATTRIBUTION.md` | ลบรายการของ `docs/brand/*` และ `pdfcraft-tools.png` และ hash ของไอคอนที่ติดป้าย TH | รวมรายการใหม่ของต้นทางเข้ามา ห้ามเอารายการ `docs/brand/*` กลับมา แล้วรัน `cargo xtask assets --write` |
 
-test ที่เราแก้ตามไปด้วย: `crates/edit/src/tests.rs` และ `crates/ui-egui/tests/it/` (`content.rs`, `editing.rs`, `fonts.rs`, `links.rs`, `ui.rs`)
+test ที่เราแก้ตามไปด้วย: `crates/edit/src/tests.rs`, `crates/engine/src/links/tests.rs` และ `crates/ui-egui/tests/it/` (`content.rs`, `editing.rs`, `fonts.rs`, `links.rs`, `ui.rs`)
 
 ถ้าต้นทาง merge [PR #5132](https://github.com/storytold/pdfcraft/pull/5132) จะมี Thai fallback ซ้ำกับของเรา ให้เหลือชุดเดียว และคงลำดับ font กับ `thai_face` ของเราไว้
 
 ถ้าต้นทางเพิ่มการ์ดหรือปุ่มโปรโมทใหม่ git จะไม่เอาออกให้ ต้องลบเองแล้วเพิ่มลงตารางนี้
 
-ถ้าไฟล์ใน `assets/app-icon/` หรือ `ATTRIBUTION.toml` โดน conflict ให้เอาของต้นทางมา แล้วติดป้าย TH ใหม่:
+ถ้าไฟล์ใน `assets/app-icon/` โดน conflict หรือต้นทางเปลี่ยนไอคอน ให้เอาของต้นทางมา แล้วติดป้าย TH ใหม่ (สคริปต์อัปเดต hash ใน `ATTRIBUTION.toml` ให้เอง):
 
 ```bash
-git checkout main -- assets/app-icon ATTRIBUTION.toml
+git checkout main -- assets/app-icon
 ```
 
 ```bash
@@ -103,11 +133,11 @@ cargo xtask assets --write
 
 ## font ที่ใช้
 
-- **ตัวแอป:** Sukhumvit Set, Sathu, Silom, Tahoma ตามลำดับ
-- **เปิดดู PDF ที่ไม่ฝัง font:** Sukhumvit Set, Sathu, Tahoma ตามลำดับ
-- **เขียนลง PDF บน macOS:** ไฟล์ที่ผู้ใช้ติดตั้งเอง (`Sarabun-Regular.ttf`, `THSarabunNew.ttf`, `NotoSansThai-Regular.ttf`), `Sarabun.ttc` ของ macOS, TH SarabunPSK ของ Word แล้วจึงเป็น Tahoma
-- **เขียนลง PDF บน Windows:** ไฟล์ที่ติดตั้งเองใน `C:\Windows\Fonts`, Leelawadee UI แล้วจึงเป็น Tahoma
-- **ถ้า build พร้อม `CRAFT_FONTS_DIR`:** font ไทยจาก craft-fonts จะถูกใช้ก่อน font ในเครื่อง
+- **ตัวแอป (แสดงบนจอ):** Sukhumvit Set, Sathu, Silom, Tahoma ตามลำดับ
+- **เปิดดู PDF ที่ไม่ฝัง font (แสดงบนจอ):** Sukhumvit Set, Sathu, Tahoma ตามลำดับ
+- **เขียนลง PDF บน macOS:** ไฟล์ที่ผู้ใช้ติดตั้งเอง (`Sarabun-Regular.ttf`, `THSarabunNew.ttf`, `NotoSansThai-Regular.ttf` ใน `/Library/Fonts` หรือ `~/Library/Fonts`) แล้วจึง `Sarabun.ttc` ที่ macOS โหลดมาไว้ ทุกไฟล์ต้องประกาศสัญญาเปิดในตัว font เอง ถ้าไม่ประกาศจะถูกข้าม
+- **เขียนลง PDF บน Windows:** ไฟล์ชื่อเดียวกันใน `C:\Windows\Fonts` หรือ `%LOCALAPPDATA%\Microsoft\Windows\Fonts` เท่านั้น Windows ไม่มี Sarabun มาให้ ต้องติดตั้งเอง ถ้าไม่มี Add Text ภาษาไทยจะขึ้น error บอกให้ติดตั้ง
+- **ถ้า build พร้อม `CRAFT_FONTS_DIR`:** font ไทยจาก craft-fonts (Noto Sans Thai, OFL) จะถูกใช้ก่อน font ในเครื่อง
 - ตอนนี้โปรแกรมเลือก font ให้อัตโนมัติ ยังไม่มีเมนูให้ผู้ใช้เลือก font ไทยเอง
 - `PDFCRAFT_SYSTEM_FONTS=0` ปิดการอ่าน font ในเครื่องทั้งหมด
 
@@ -134,7 +164,15 @@ cargo test -p pdfcraft-edit -j 2
 ```
 
 ```bash
+cargo test -p pdfcraft-engine -j 2
+```
+
+```bash
 cargo test -p pdfcraft-ui-egui -j 2
+```
+
+```bash
+cargo xtask assets
 ```
 
 test `editing::a_custom_property_whose_name_the_tools_refuse_is_listed_and_left_alone` ล้มอยู่แล้วบน `main` เมื่อ build โดยไม่มี `CRAFT_FONTS_DIR` ไม่เกี่ยวกับงานเรา ถ้ามี test อื่นล้มให้ลองเทียบกับ `main` ก่อนเสมอ
@@ -153,6 +191,8 @@ cargo run -p pdfcraft -- ไฟล์.pdf
 - [ ] พิมพ์ไทยในช่องค้นหาและช่องข้อความได้
 - [ ] คำว่า `ที่ น้ำ ผู้ใช้ กิ่` วรรณยุกต์ไม่ซ้อนสระ
 - [ ] ไอคอนแอปมีป้าย TH
+- [ ] หน้า About มีไอคอน PdfCraft และข้อความว่าไม่ใช่ของทางการ ไม่มีโลโก้ ArtCraft
+- [ ] เมนู Help ไม่มี Discord หรือเว็บไซต์ ArtCraft
 - [ ] Add Text พิมพ์ไทย บันทึก เปิดใหม่ แล้วคัดลอกข้อความได้
 - [ ] Edit Text แก้ย่อหน้าใน PDF ไทย บันทึก แล้วเปิดในโปรแกรมอื่นได้
 - [ ] PDF ไทยที่ไม่ฝัง font แสดงบนจอได้
@@ -165,4 +205,4 @@ cargo run -p pdfcraft -- ไฟล์.pdf
 - ตัวหนาและตัวเอียงตอนเขียนไทยลง PDF: ใช้ face Regular อย่างเดียว
 - Edit Text กับข้อความที่หมุนอยู่ หรือการเปลี่ยนตัวหนาหรือ font พร้อมกับพิมพ์ไทย จะขึ้น error
 - หน้า PDF ที่ไม่ฝัง font แก้เฉพาะตอนดูบนจอ ไม่รวมตอนพิมพ์หรือ export และต้องเป็น font ชนิด CID ที่ชื่อเป็น font ไทย
-- ลิงก์ Discord ใน Help menu และหน้า About ยังอยู่ เพราะไม่ใช่โฆษณา
+- ยังไม่ได้ทำความสะอาดชื่อ ArtCraft ในไฟล์ของ `packaging/` ดูหัวข้อ "ใบอนุญาต"

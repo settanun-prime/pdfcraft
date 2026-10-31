@@ -60,8 +60,9 @@ set). Without that variable `CRAFT_FONTS` is empty and everything below copes:
   Sara Am; cluster ToUnicode entries preserve the original text. The shared Type 3 writer
   embeds outlines, so reopening does not depend on installed fonts. Without a `Thai` face,
   `document_thai_font` takes `installed_thai_font`: a face on this machine that allows editable
-  embedding (on macOS Sarabun, then TH SarabunPSK, then Tahoma; a collection's Regular face comes
-  out as a font of its own). `PDFCRAFT_SYSTEM_FONTS=0` turns it off.
+  embedding and declares an open licence (Sarabun or Noto Sans Thai; a collection's Regular face
+  comes out as a font of its own). Tahoma and the fonts that come with Word are never used: they
+  allow embedding but are not open. `PDFCRAFT_SYSTEM_FONTS=0` turns it off.
 - `SHIPPORI_MINCHO`: Shippori Mincho's bytes, or `None`.
 
 Generated Japanese Type 3 fonts record the fallback face's family and style in an indirect

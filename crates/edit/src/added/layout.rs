@@ -284,7 +284,8 @@ pub(super) fn hebrew_error(e: GlyphError, text: &str) -> EditError {
 pub(super) fn thai_error(e: GlyphError, text: &str) -> EditError {
     EditError::Invalid(match e {
         GlyphError::NoFont => {
-            "Thai text needs a Thai font in this build; rebuild with CRAFT_FONTS_DIR pointing to craft-fonts with a Thai face".into()
+            "Thai text needs an openly licensed Thai font: install Sarabun or Noto Sans Thai, or rebuild with CRAFT_FONTS_DIR pointing to craft-fonts with a Thai face"
+                .into()
         }
         GlyphError::Missing => format!("the Thai font can't show \"{text}\""),
         GlyphError::TooComplex => "the Thai glyphs are too complex; use a shorter text box".into(),

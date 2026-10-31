@@ -1,5 +1,6 @@
-//! Community links: the Help menu and About dialog open the ArtCraft and PdfCraft pages. Neither
-//! the home screen nor the title bar promotes them.
+//! Links: the Help menu and About dialog point to where PdfCraft comes from. This edition carries
+//! no ArtCraft mark (its name or logos), and neither the home screen nor the title bar promotes a
+//! community.
 
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
@@ -26,17 +27,26 @@ fn neither_home_nor_the_title_bar_promotes_the_community() {
 }
 
 #[test]
-fn about_dialog_shows_the_brand_and_links() {
+fn about_dialog_links_to_the_project_and_carries_no_artcraft_mark() {
     let pdf = b"%PDF-1.7\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >> endobj\ntrailer << /Root 1 0 R >>\n%%EOF";
     // With a document open, so the home screen's own links are not on screen.
     let mut h = harness(move |app| {
         app.open_bytes("one.pdf", None, pdf.to_vec()).unwrap();
         app.dialog = Some(Dialog::About);
     });
-    assert!(h.query_all_by_label("ArtCraft").count() >= 2, "the mark and the wordmark (alt text)");
-    h.get_by_label("Join our Discord").click();
+    assert_eq!(h.query_all_by_label("ArtCraft").count(), 0, "no ArtCraft logo (it would carry that alt text)");
+    assert!(h.query_by_label("Join our Discord").is_none());
+    h.get_by_label("PdfCraft on GitHub").click();
     h.run_steps(2);
-    assert_eq!(h.state().last_opened_url.as_deref(), Some(links::DISCORD));
+    assert_eq!(h.state().last_opened_url.as_deref(), Some(links::GITHUB));
+}
+
+#[test]
+fn the_help_menu_has_no_discord_or_artcraft_website_entry() {
+    for id in ["help.discord", "help.website"] {
+        assert!(pdfcraft_engine::commands::command(id).is_none(), "{id}");
+    }
+    assert!(links::LINKS.iter().all(|l| !l.label.contains("ArtCraft") && !l.url.contains("discord")));
 }
 
 #[test]

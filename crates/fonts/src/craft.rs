@@ -90,9 +90,11 @@ const MAX_COLLECTION_FACES: u32 = 32;
 /// Downloaded font assets looked at per kind on macOS.
 const MAX_FONT_ASSETS: usize = 512;
 
-/// A Thai face already installed on this machine, read once. Text written with it carries the
-/// face's outlines into the PDF, unlike every other installed face, so only a standalone face
-/// whose licence bits allow editable embedding qualifies. `PDFCRAFT_SYSTEM_FONTS=0` turns it off.
+/// An openly licensed Thai face already installed on this machine, read once. Text written with it
+/// carries the face's outlines into the PDF, unlike every other installed face, so the face has to
+/// declare its licence (`embedding::validate_document_input`: OFL, Apache, MIT…). Embedding bits
+/// alone don't qualify, so Tahoma and the fonts that come with Word are never used for this.
+/// `PDFCRAFT_SYSTEM_FONTS=0` turns it off.
 pub fn installed_thai_font() -> Option<&'static CraftFont> {
     static FACE: OnceLock<Option<CraftFont>> = OnceLock::new();
     FACE.get_or_init(|| {
@@ -104,9 +106,9 @@ pub fn installed_thai_font() -> Option<&'static CraftFont> {
     .as_ref()
 }
 
-/// The face at `path` when it is a regular file that shows Thai and may be embedded, the Regular
-/// one of a collection. Its bytes live as long as the process: this runs once, and [`CraftFont`]
-/// holds static data.
+/// The face at `path` when it is a regular file that shows Thai, may be embedded and declares an
+/// open licence, the Regular one of a collection. Its bytes live as long as the process: this runs
+/// once, and [`CraftFont`] holds static data.
 fn read_thai_face(path: &Path) -> Option<CraftFont> {
     let meta = std::fs::metadata(path).ok()?;
     if !meta.is_file() || meta.len() > MAX_INSTALLED_BYTES {
@@ -117,7 +119,8 @@ fn read_thai_face(path: &Path) -> Option<CraftFont> {
     if !crate::embedding::covers(&bytes, THAI_PROBE) {
         return None;
     }
-    // `names` validates the face first.
+    // Permission to embed is not a licence: the face has to declare an open one.
+    crate::embedding::validate_document_input(&bytes).ok()?;
     let (family, _) = crate::embedding::names(&bytes).ok()?;
     let family: &'static str = Box::leak(family.into_boxed_str());
     let bytes: &'static [u8] = Box::leak(bytes.into_boxed_slice());
@@ -182,22 +185,22 @@ fn macos_font_assets() -> Vec<PathBuf> {
         .collect()
 }
 
-/// Where a Thai document face may be, best first: a document face the user installed, then what
-/// the machine already has. Sarabun comes first on macOS, as a book face; Tahoma is the last
-/// resort. All of them have the GSUB and GPOS tables shaping needs, which rules out Thonburi.
+/// Where an openly licensed Thai document face may be, best first: one the user installed, then
+/// Sarabun, which macOS downloads as a collection. Each still has to declare its licence when read.
+/// The fonts that ship with the system or with Word are left out on purpose: they are not open, and
+/// all of them have the shaping tables Thonburi lacks.
 fn installed_thai_candidates() -> Vec<PathBuf> {
     const DOCUMENT_FACES: &[&str] = &["Sarabun-Regular.ttf", "THSarabunNew.ttf", "NotoSansThai-Regular.ttf"];
     if cfg!(windows) {
         let root = std::env::var_os("WINDIR").or_else(|| std::env::var_os("SystemRoot"));
-        let fonts = root.map_or_else(|| PathBuf::from(r"C:\Windows"), PathBuf::from).join("Fonts");
-        DOCUMENT_FACES.iter().copied().chain(["LeelawUI.ttf", "tahoma.ttf"]).map(|f| fonts.join(f)).collect()
+        let mut dirs = vec![root.map_or_else(|| PathBuf::from(r"C:\Windows"), PathBuf::from).join("Fonts")];
+        dirs.extend(std::env::var_os("LOCALAPPDATA").map(|local| PathBuf::from(local).join("Microsoft/Windows/Fonts")));
+        dirs.iter().flat_map(|dir| DOCUMENT_FACES.iter().map(move |f| dir.join(f))).collect()
     } else if cfg!(target_os = "macos") {
         let mut dirs = vec![PathBuf::from("/Library/Fonts")];
         dirs.extend(std::env::var_os("HOME").map(|home| PathBuf::from(home).join("Library/Fonts")));
         let mut paths: Vec<PathBuf> = dirs.iter().flat_map(|dir| DOCUMENT_FACES.iter().map(move |f| dir.join(f))).collect();
         paths.extend(macos_font_assets().into_iter().map(|dir| dir.join("Sarabun.ttc")));
-        paths.push(PathBuf::from("/Applications/Microsoft Word.app/Contents/Resources/DFonts/thsarabun.ttf"));
-        paths.push(PathBuf::from("/System/Library/Fonts/Supplemental/Tahoma.ttf"));
         paths
     } else {
         let mut dirs = vec![
@@ -565,17 +568,27 @@ mod tests {
         assert!(regular_face(b"ttcf").is_none());
     }
 
-    /// Writing Thai on a Mac needs no craft-fonts: at the least, macOS ships Tahoma.
+    /// An installed face goes into saved PDFs, so it has to declare an open licence. Its embedding
+    /// bits are not enough: they say what the font allows, not on what terms it was licensed.
+    #[test]
+    fn an_installed_thai_font_declares_an_open_licence() {
+        if let Some(face) = installed_thai_font() {
+            assert!(crate::embedding::validate_document_input(face.bytes).is_ok(), "{}", face.family);
+            assert!(crate::embedding::covers(face.bytes, "น้ำ กิ่ ผู้ใช้ ๑๒๓ Hello"));
+            assert!(face.covers("Thai"));
+        }
+    }
+
+    /// Tahoma and the Thai fonts that come with Word allow embedding by their bits, but belong to
+    /// Microsoft and are licensed for their own products. They may draw on screen, never go into a PDF.
     #[cfg(target_os = "macos")]
     #[test]
-    fn a_mac_writes_thai_with_an_installed_embeddable_face() {
-        if std::env::var_os("PDFCRAFT_SYSTEM_FONTS").is_some_and(|v| v == "0") {
-            return;
+    fn a_mac_never_writes_thai_in_a_proprietary_font() {
+        for path in ["/System/Library/Fonts/Supplemental/Tahoma.ttf", "/Applications/Microsoft Word.app/Contents/Resources/DFonts/thsarabun.ttf"] {
+            if Path::new(path).is_file() {
+                assert!(read_thai_face(Path::new(path)).is_none(), "{path}");
+            }
         }
-        let face = installed_thai_font().expect("an installed Thai document face");
-        assert!(crate::embedding::validate(face.bytes).is_ok());
-        assert!(crate::embedding::covers(face.bytes, "น้ำ กิ่ ผู้ใช้ ๑๒๓ Hello"));
-        assert!(face.covers("Thai"));
     }
 
     /// macOS downloads Sarabun as a collection. Its Regular face has to come out, not a lighter
