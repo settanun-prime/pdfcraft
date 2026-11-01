@@ -6,7 +6,7 @@
     python3 packaging/thai/make-logo.py --preview FILE.png   only write a 1024 px preview, touch nothing else
 
 The icon is a red page with a folded corner and the word pdfคับ in a pale pink, with pdf large and
-tilted away from the fold, and คับ small. Everything is plain polygons, so the SVG and every PNG come from the same shapes. The outlines of the words are traced
+tilted up to the right, and คับ small. Everything is plain polygons, so the SVG and every PNG come from the same shapes. The outlines of the words are traced
 from Kodchasan Bold (SIL Open Font License 1.1) and stored in logo-glyphs.json, so drawing needs
 neither the font nor any tool besides Pillow and, on a Mac, iconutil.
 
@@ -188,12 +188,12 @@ def tilted(loops, degrees):
 
 
 def layers(glyphs):
-    """(colour, loops) from bottom to top, in a 512 px square. pdf tilts down to the right, away from the fold."""
+    """(colour, loops) from bottom to top, in a 512 px square. pdf tilts up to the right."""
     return [
         (RED, [page()]),
         (FOLD, [[(412, 0), (512, 100), (440, 100), (412, 72)]]),
-        (INK, tilted(at_left(glyphs["pdf"], 40, 96, 404), 6)),
-        (INK, centred(glyphs["คับ"], 330, 412, 232)),
+        (INK, tilted(at_left(glyphs["pdf"], 42, 118, 392), -8)),
+        (INK, centred(glyphs["คับ"], 334, 408, 232)),
     ]
 
 
