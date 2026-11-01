@@ -4,7 +4,7 @@ Branch `custom/thai-no-ads` เพิ่มสี่เรื่องจาก�
 
 1. อ่านและเขียนภาษาไทยด้วย font ที่มีในเครื่อง ไม่เป็น `[]`
 2. เอาการ์ด "Join the ArtCraft community" บนหน้า Home และปุ่ม Discord บนแถบด้านบนออก
-3. ติดป้าย TH บนไอคอนแอป เพื่อให้รู้ว่าเป็นเวอร์ชันไทย
+3. ใช้ไอคอนของเราเอง (คำว่า pdfคับ บนกระดาษสีแดง) เพื่อให้รู้ว่าเป็นเวอร์ชันไทย
 4. เอาชื่อและโลโก้ ArtCraft ออกจากแอป เมนู CLI README และโฟลเดอร์ `docs/brand` ตามที่ต้นทางกำหนดไว้สำหรับ fork ที่แก้ไข
 
 **สถานะ (2026-10-31):** build และทดสอบผ่านบน macOS แล้ว ยังไม่เคย build หรือทดสอบบน Windows
@@ -24,7 +24,7 @@ Branch `custom/thai-no-ads` เพิ่มสี่เรื่องจาก�
 | เรื่อง | กติกา | สิ่งที่เราทำ |
 |---|---|---|
 | โค้ด | MIT OR Apache-2.0 แก้ได้ แจกต่อได้ ต้องเก็บประกาศลิขสิทธิ์ไว้ | ไม่แตะ `LICENSE-MIT`, `LICENSE-APACHE`, `NOTICE` รายการสิ่งที่แก้อยู่ในไฟล์นี้ |
-| ไอคอนของเรา (หน้ากระดาษ ตัว ก และป้าย PDF) | งานต้นฉบับของฉบับนี้ MIT OR Apache-2.0 (`assets/app-icon/LICENSE.txt`) รูปร่างตัว ก, P, D, F ลากจาก Sarabun Bold (SIL OFL 1.1) | สร้างด้วย `packaging/thai/make-logo.py` ไม่มีโลโก้หรือสิงโตของต้นทาง |
+| ไอคอน pdfคับ ของเรา | งานต้นฉบับของฉบับนี้ MIT OR Apache-2.0 (`assets/app-icon/LICENSE.txt`) รูปร่างคำลากจาก Kodchasan Bold (SIL OFL 1.1) | สร้างด้วย `packaging/thai/make-logo.py` ไม่มีโลโก้หรือสิงโตของต้นทาง |
 | ชื่อและโลโก้ ArtCraft | เป็นเครื่องหมายการค้า ไม่ใช่โอเพนซอร์ส ถ้าเผยแพร่เวอร์ชันที่แก้ไขต้องเอาออก (`docs/brand/LICENSE-brand.txt`, `AGENTS.md`, `README.md`, `NOTICE` ของต้นทางเขียนตรงกัน) | เอาโลโก้ รูปที่มีโลโก้ ปุ่ม เมนู และหน้า About ออกหมด README เป็นของเราเอง |
 | คำที่ยังบอกได้ | บอกเป็นข้อความธรรมดาได้ว่า "based on PdfCraft by the ArtCraft team" | หน้า About และ README บอกไว้ และบอกด้วยว่าไม่ใช่ของทางการ ห้ามเขียนว่าทีมนั้นรับรองหรือสนับสนุน |
 | font ตอนแสดงบนจอ | อ่าน font ที่ติดตั้งในเครื่องมาวาดบนจอเป็นเรื่องปกติ ไม่คัดลอก ไม่แจก | ใช้ Sukhumvit Set, Sathu, Tahoma แสดงบนจอเท่านั้น |
@@ -126,7 +126,7 @@ git push origin custom/thai-no-ads
 | `apps/pdfcraft-cli/src/main.rs` | ลบบรรทัด Discord ใน help และ `--version` | ลบต่อไป |
 | `README.md`, `.gitattributes` | README เป็นของเราเอง และมีบรรทัด `README.md merge=ours` | ไม่ควรโดน conflict ถ้าตั้ง `merge.ours.driver` แล้ว ถ้าโดน ให้เอาของเรา (`git checkout --ours README.md`) |
 | `docs/brand/` (ยกเว้น `LICENSE-brand.txt`), `docs/images/pdfcraft-tools.png` | ลบโลโก้และภาพที่มีโลโก้ติดอยู่ แต่เก็บ `LICENSE-brand.txt` ไว้ไฟล์เดียว เพราะด่าน `cargo xtask license-check` ของต้นทางบังคับให้มี (ดู `LICENSES.toml`) | ถ้าต้นทางแก้หรือเพิ่มไฟล์ใน `docs/brand/` ให้รับ `LICENSE-brand.txt` ฉบับใหม่ของต้นทาง ที่เหลือลบต่อด้วย `git rm` |
-| `ATTRIBUTION.toml`, `ATTRIBUTION.md` | ลบรายการของ `docs/brand/*` และ `pdfcraft-tools.png` และ hash ของไอคอนที่ติดป้าย TH | รวมรายการใหม่ของต้นทางเข้ามา ห้ามเอารายการ `docs/brand/*` กลับมา แล้วรัน `cargo xtask assets --write` |
+| `ATTRIBUTION.toml`, `ATTRIBUTION.md` | ลบรายการของ `docs/brand/*` และ `pdfcraft-tools.png` และรายการไอคอนเป็นของเรา (ผู้สร้าง ที่มา และ hash) | รวมรายการใหม่ของต้นทางเข้ามา ห้ามเอารายการ `docs/brand/*` กลับมา แล้วรัน `cargo xtask assets --write` |
 | `packaging/macos/Credits.rtf` | ข้อความเป็นของเรา ไม่มีลิงก์ Discord หรือเว็บ ArtCraft และบอกว่าเป็นฉบับไม่เป็นทางการ | เอาของเรา ถ้าต้นทางแก้ไฟล์นี้ให้ดูว่าเพิ่มลิงก์โปรโมทไหม แล้วรับเฉพาะส่วนที่ไม่ใช่โปรโมท |
 | `LICENSES.toml` | hash ของ `assets/app-icon/LICENSE.txt` เปลี่ยนเป็นของข้อความใบอนุญาตไอคอนใหม่ของเรา (ด่าน `license-check` บังคับให้ hash ตรง) | ถ้าโดน conflict ให้รับของต้นทางทั้งไฟล์ แล้วแก้บรรทัด `sha256` ของรายการ `assets/app-icon/LICENSE.txt` เป็นค่าจาก `shasum -a 256 assets/app-icon/LICENSE.txt` |
 | `.github/workflows/thai-build.yml`, `packaging/thai/` | ไฟล์ของเราเอง ต้นทางไม่มี จึงไม่ชน | เก็บไว้ทั้งหมด |
@@ -172,7 +172,7 @@ cargo xtask assets --write
 
 1. โลโก้ใหม่ต้องเป็นงานที่เราสร้างเอง หรือมีใบอนุญาตเปิดที่ใช้แก้ไขและแจกต่อได้ ห้ามเลียนเครื่องหมายของคนอื่น และห้ามมีชื่อหรือรูป ArtCraft
 2. ใส่รายการใน `ATTRIBUTION.toml` (ผู้สร้าง ใบอนุญาต ไฟล์ใบอนุญาต `sha256`) แล้วรัน `cargo xtask assets --write` มิฉะนั้นด่านตรวจใน CI ล้ม
-3. ไอคอนสิงโตเดิมของต้นทางเป็นงานของโครงการเองภายใต้ MIT OR Apache-2.0 เราเปลี่ยนเป็นไอคอนของเราแล้ว (หน้ากระดาษ ตัว ก และป้าย PDF วาดโดย `packaging/thai/make-logo.py`) ถ้าจะวาดใหม่อีก ให้แก้ตัวสคริปต์หรือ `packaging/thai/logo-glyphs.json` แล้วรันซ้ำ
+3. ไอคอนสิงโตเดิมของต้นทางเป็นงานของโครงการเองภายใต้ MIT OR Apache-2.0 เราเปลี่ยนเป็นไอคอนของเราแล้ว (คำว่า pdfคับ บนกระดาษสีแดง วาดโดย `packaging/thai/make-logo.py`) ถ้าจะแก้สีหรือเลย์เอาต์ ให้แก้ค่าในสคริปต์แล้วรันซ้ำ
 4. ไฟล์ใน `assets/app-icon/` จะโดน conflict ทุกครั้งที่ต้นทางเปลี่ยนไอคอน ให้เก็บของเรา
 
 
@@ -241,7 +241,7 @@ cargo run -p pdfcraft -- ไฟล์.pdf
 - [ ] ชื่อไฟล์ไทยในแท็บและ Recent ไม่เป็นสี่เหลี่ยม
 - [ ] พิมพ์ไทยในช่องค้นหาและช่องข้อความได้
 - [ ] คำว่า `ที่ น้ำ ผู้ใช้ กิ่` วรรณยุกต์ไม่ซ้อนสระ
-- [ ] ไอคอนแอปมีป้าย TH
+- [ ] ไอคอนแอปเป็นโลโก้ pdfคับ สีแดง
 - [ ] หน้า About มีไอคอน PdfCraft และข้อความว่าไม่ใช่ของทางการ ไม่มีโลโก้ ArtCraft
 - [ ] เมนู Help ไม่มี Discord หรือเว็บไซต์ ArtCraft
 - [ ] Add Text พิมพ์ไทย บันทึก เปิดใหม่ แล้วคัดลอกข้อความได้

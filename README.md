@@ -21,7 +21,7 @@ A Thai edition of PdfCraft, an open-source PDF application written in Rust.
   Thai in Add Text and Edit Text, written only with openly licensed fonts (OFL, Apache, MIT).
 - **เปิด PDF ไทยที่ไม่ฝัง font ได้** ใช้ font ในเครื่องแสดงบนจอเท่านั้น ไม่ใช้ตอนพิมพ์หรือ export
   PDFs that don't embed their Thai font draw with an installed one, on screen only.
-- ไอคอนมีป้าย **TH** / the app icon carries a **TH** badge.
+- ไอคอนของเราเอง: คำว่า pdfคับ บนแผ่นกระดาษสีแดง / our own icon: the word pdfคับ on a red page.
 - เอาชื่อและโลโก้ ArtCraft การ์ดชวนเข้าชุมชน และปุ่ม Discord ออก
   The ArtCraft name and logos, the community card and the Discord button are removed.
 

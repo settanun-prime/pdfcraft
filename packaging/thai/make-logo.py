@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""Draw the PdfCraft TH app icon and write every size of it.
+"""Draw the pdfคับ app icon and write every size of it.
 
     python3 packaging/thai/make-logo.py            draw from logo-glyphs.json, write assets/app-icon/*
-    python3 packaging/thai/make-logo.py --trace    first re-trace the letters from Sarabun Bold (needs the font)
+    python3 packaging/thai/make-logo.py --trace    first re-trace the words from Kodchasan Bold (needs the font)
     python3 packaging/thai/make-logo.py --preview FILE.png   only write a 1024 px preview, touch nothing else
 
-The icon is a page with a folded corner, the Thai letter ก on it and a red PDF label. Everything is
-plain polygons, so the SVG and every PNG come from the same shapes. The outlines of ก, P, D and F are
-traced from Sarabun Bold (SIL Open Font License 1.1) and stored in logo-glyphs.json, so drawing needs
+The icon is a red page with a folded corner and the word pdfคับ in white. Everything is plain
+polygons, so the SVG and every PNG come from the same shapes. The outlines of the words are traced
+from Kodchasan Bold (SIL Open Font License 1.1) and stored in logo-glyphs.json, so drawing needs
 neither the font nor any tool besides Pillow and, on a Mac, iconutil.
 
-After running it, update the sha256 values in ATTRIBUTION.toml (this script does that too), then run
-`cargo xtask assets --write`.
+This script also updates the sha256 values in ATTRIBUTION.toml. Run `cargo xtask assets --write` after it.
 """
 import glob
 import hashlib
@@ -30,8 +29,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 ICONS = ROOT / "assets/app-icon"
 GLYPHS = pathlib.Path(__file__).with_name("logo-glyphs.json")
 ID = "ai.storyteller.pdfcraft"
-NAVY, PAGE, FOLD, RED = "#1e2a5e", "#f7f4eb", "#d8d2c0", "#b70228"
-TRACED = "กPDF"
+RED_TOP, RED_BOTTOM, WHITE, FOLD = "#f2382b", "#c9150f", "#ffffff", "#ff9d92"
+WORDS = ("pdf", "คับ")
 
 
 # ---- tracing the letters from the font ----------------------------------------------------------
@@ -136,76 +135,82 @@ def inside(p, poly):
 
 
 def trace():
-    ttc = glob.glob("/System/Library/AssetsV2/com_apple_MobileAsset_Font*/*/AssetData/Sarabun.ttc")
+    ttc = glob.glob("/System/Library/AssetsV2/com_apple_MobileAsset_Font*/*/AssetData/Kodchasan.ttc")
     if not ttc:
-        sys.exit("make-logo: Sarabun.ttc not found; the traced letters in logo-glyphs.json are used as they are")
-    em, pad, out = 1000, 40, {}
-    font = ImageFont.truetype(ttc[0], em, index=6)  # Sarabun Bold
-    assert font.getname() == ("Sarabun", "Bold"), font.getname()
+        sys.exit("make-logo: Kodchasan.ttc not found; the outlines in logo-glyphs.json are used as they are")
+    em, pad, out = 1000, 400, {}  # the pad keeps Thai marks, which hang left of their origin, in the image
+    font = ImageFont.truetype(ttc[0], em, index=6)
+    assert font.getname() == ("Kodchasan", "Bold"), font.getname()
     ascent, descent = font.getmetrics()
-    for ch in TRACED:
-        img = Image.new("L", (int(font.getlength(ch)) + 2 * pad, ascent + descent + 2 * pad), 0)
-        ImageDraw.Draw(img).text((pad, pad + ascent), ch, font=font, fill=255, anchor="ls")
-        loops = [simplify([(x - pad, y - pad - ascent) for x, y in lp], 0.8) for lp in contours(img)]
-        loops = [lp for lp in loops if len(lp) > 3]
-        out[ch] = {"advance": round(font.getlength(ch), 1), "loops": [[[round(x, 1), round(y, 1)] for x, y in lp] for lp in loops]}
+    for word in WORDS:
+        img = Image.new("L", (int(font.getlength(word)) + 2 * pad, ascent + descent + 2 * pad), 0)
+        ImageDraw.Draw(img).text((pad, pad + ascent), word, font=font, fill=255, anchor="ls")
+        loops = [simplify([(x - pad, y - pad - ascent) for x, y in lp], 0.35) for lp in contours(img)]
+        out[word] = [[[round(x, 1), round(y, 1)] for x, y in lp] for lp in loops if len(lp) > 3]
     GLYPHS.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
-    print("traced", " ".join(f"{c}:{sum(len(l) for l in g['loops'])}pts" for c, g in out.items()))
+    print("traced", " ".join(f"{w}:{sum(len(l) for l in lp)}pts" for w, lp in out.items()))
 
 
 # ---- the drawing ---------------------------------------------------------------------------------
-def rounded(x0, y0, x1, y1, r, step=5):
-    pts = []
-    for cx, cy, a0 in ((x1 - r, y0 + r, -90), (x1 - r, y1 - r, 0), (x0 + r, y1 - r, 90), (x0 + r, y0 + r, 180)):
-        for a in range(a0, a0 + 91, step):
-            pts.append((cx + r * math.cos(math.radians(a)), cy + r * math.sin(math.radians(a))))
+def page(cut=148, r=112):
+    """A rounded square with its top right corner cut off for the fold."""
+    pts = [(512 - cut, 0), (512, cut)]
+    for cx, cy, a0 in ((512 - r, 512 - r, 0), (r, 512 - r, 90), (r, r, 180)):
+        pts += [(cx + r * math.cos(math.radians(a)), cy + r * math.sin(math.radians(a))) for a in range(a0, a0 + 91, 5)]
     return pts
 
 
-def letters(text, glyphs, height, cx, cy, tracking=0.0):
-    """Loops of `text` scaled so the tallest letter is `height` px, centred on (cx, cy)."""
-    pen, placed = 0.0, []
-    for ch in text:
-        g = glyphs[ch]
-        placed.append((pen, g))
-        pen += g["advance"] * (1 + tracking)
-    xs = [pen_x + p[0] for pen_x, g in placed for lp in g["loops"] for p in lp]
-    ys = [p[1] for _, g in placed for lp in g["loops"] for p in lp]
-    k = height / (max(ys) - min(ys))
-    mx, my = (max(xs) + min(xs)) / 2, (max(ys) + min(ys)) / 2
-    return [[(cx + (pen_x + p[0] - mx) * k, cy + (p[1] - my) * k) for p in lp] for pen_x, g in placed for lp in g["loops"]]
+def bounds(loops):
+    xs, ys = [p[0] for lp in loops for p in lp], [p[1] for lp in loops for p in lp]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def at_left(loops, x, top, height):
+    """Scale to `height` with the top left of the ink at (x, top)."""
+    x0, y0, _, y1 = bounds(loops)
+    k = height / (y1 - y0)
+    return [[(x + (px - x0) * k, top + (py - y0) * k) for px, py in lp] for lp in loops]
+
+
+def centred(loops, cx, cy, width):
+    """Scale to `width` with the ink centred on (cx, cy)."""
+    x0, y0, x1, y1 = bounds(loops)
+    k = width / (x1 - x0)
+    return [[(cx + (px - (x0 + x1) / 2) * k, cy + (py - (y0 + y1) / 2) * k) for px, py in lp] for lp in loops]
 
 
 def layers(glyphs):
-    """(colour, loops, hole colour) from bottom to top, in a 512 px square."""
-    page = [(100, 56), (346, 56), (412, 122), (412, 456), (100, 456)]
-    out = [
-        (NAVY, [rounded(0, 0, 512, 512, 112)], None),
-        (PAGE, [page], None),
-        (FOLD, [[(346, 56), (412, 122), (346, 122)]], None),
-        (NAVY, letters("ก", glyphs, 190, 256, 208), PAGE),
-        (RED, [rounded(128, 336, 384, 420, 18)], None),
-        (PAGE, letters("PDF", glyphs, 46, 256, 378, 0.06), RED),
+    """(fill, loops) from bottom to top, in a 512 px square. A tuple fill is a top to bottom gradient."""
+    return [
+        ((RED_TOP, RED_BOTTOM), [page()]),
+        (FOLD, [[(364, 0), (512, 148), (392, 148), (364, 120)]]),
+        (WHITE, at_left(glyphs["pdf"], 54, 56, 112)),
+        (WHITE, centred(glyphs["คับ"], 258, 336, 416)),
     ]
-    return out
 
 
-def split(loops):
-    """Even nesting depth fills, odd depth is a hole."""
-    solid, holes = [], []
-    for i, lp in enumerate(loops):
-        depth = sum(1 for j, other in enumerate(loops) if j != i and inside(lp[0], other))
-        (holes if depth % 2 else solid).append(lp)
-    return solid, holes
+def by_depth(loops):
+    """(nesting depth, loop), outermost first: even depth fills, odd depth is a hole."""
+    depth = [(sum(1 for j, other in enumerate(loops) if j != i and inside(lp[0], other)), lp) for i, lp in enumerate(loops)]
+    return sorted(depth, key=lambda item: item[0])
 
 
 def svg(glyphs):
     def d(loops):
         return "".join("M" + "L".join(f"{x:.1f} {y:.1f}" for x, y in lp) + "Z" for lp in loops)
 
-    body = "".join(f'<path fill="{colour}" fill-rule="evenodd" d="{d(loops)}"/>' for colour, loops, _ in layers(glyphs))
-    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img"><title>PdfCraft TH</title>'
-            f'<g id="thai-logo">{body}</g></svg>\n')
+    paths = []
+    for fill, loops in layers(glyphs):
+        paint = "url(#red)" if isinstance(fill, tuple) else fill
+        paths.append(f'<path fill="{paint}" fill-rule="evenodd" d="{d(loops)}"/>')
+    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img"><title>pdfคับ</title>'
+            f'<defs><linearGradient id="red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{RED_TOP}"/>'
+            f'<stop offset="1" stop-color="{RED_BOTTOM}"/></linearGradient></defs>'
+            f'<g id="thai-logo">{"".join(paths)}</g></svg>\n')
+
+
+def rgb(colour):
+    return tuple(int(colour[i:i + 2], 16) for i in (1, 3, 5))
 
 
 def render(glyphs, size, mac):
@@ -214,19 +219,22 @@ def render(glyphs, size, mac):
     n = size * ss
     k = n / 1024 * (824 / 512) if mac else n / 512
     off = n * 100 / 1024 if mac else 0
-    r, g, b = (int(NAVY[i:i + 2], 16) for i in (1, 3, 5))
-    img = Image.new("RGBA", (n, n), (r, g, b, 0))  # transparent but navy, so the edge blends to navy
-    draw = ImageDraw.Draw(img)
+    img = Image.new("RGBA", (n, n), rgb(RED_BOTTOM) + (0,))  # transparent but red, so the edge blends to red
 
-    def px(loop):
-        return [(off + x * k, off + y * k) for x, y in loop]
+    def gradient(top, bottom):
+        strip = Image.new("RGBA", (1, n))
+        a, b = rgb(top), rgb(bottom)
+        for y in range(n):
+            f = min(max((y - off) / (512 * k), 0), 1)
+            strip.putpixel((0, y), tuple(round(p + (q - p) * f) for p, q in zip(a, b)) + (255,))
+        return strip.resize((n, n))
 
-    for colour, loops, hole in layers(glyphs):
-        solid, holes = split(loops) if hole else (loops, [])
-        for lp in solid:
-            draw.polygon(px(lp), fill=colour)
-        for lp in holes:
-            draw.polygon(px(lp), fill=hole)
+    for fill, loops in layers(glyphs):
+        mask = Image.new("L", (n, n), 0)
+        draw = ImageDraw.Draw(mask)
+        for depth, lp in by_depth(loops):
+            draw.polygon([(off + x * k, off + y * k) for x, y in lp], fill=0 if depth % 2 else 255)
+        img.paste(gradient(*fill) if isinstance(fill, tuple) else fill, (0, 0), mask)
     return img.resize((size, size), Image.BOX)
 
 

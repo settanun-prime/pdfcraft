@@ -10,7 +10,7 @@ endorsed by them.
 - Add Text and Edit Text write Thai into a PDF with Sarabun or Noto Sans Thai when one of them is
   installed (both are open fonts). PDFs that do not embed a Thai font are shown with an installed
   Thai font.
-- No community card, no Discord button and no ArtCraft logos. The app icon carries a TH badge.
+- No community card, no Discord button and no ArtCraft logos. The app icon is our own: the word pdfคับ on a red page.
 
 ## Downloads
 

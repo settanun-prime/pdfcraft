@@ -1,10 +1,10 @@
-PdfCraft TH app icon (pdfcraft.svg, pdfcraft-small.svg and every file derived from them in this
-directory: pdfcraft-1024.png, pdfcraft.icns, pdfcraft.ico, hicolor/).
+pdfคับ app icon of PdfCraft TH (pdfcraft.svg, pdfcraft-small.svg and every file derived from them
+in this directory: pdfcraft-1024.png, pdfcraft.icns, pdfcraft.ico, hicolor/).
 
 Original artwork made for PdfCraft TH, an unofficial Thai edition of PdfCraft, by the owner of
 this fork with the help of Claude (Anthropic). It replaces the upstream app icon in this edition.
-The outlines of the letters ก, P, D and F are traced from Sarabun Bold (SIL Open Font License 1.1,
-Copyright The Sarabun Project Authors); that licence does not restrict artwork made with a font.
+The outlines of the word pdfคับ are traced from Kodchasan Bold (SIL Open Font License 1.1,
+Copyright The Kodchasan Project Authors); that licence does not restrict artwork made with a font.
 No ArtCraft mark is used.
 
 To the extent it is protected by copyright, licensed under either of

@@ -1,17 +1,18 @@
-# PdfCraft TH app icon
+# pdfคับ app icon
 
-<img src="pdfcraft-small.svg" alt="PdfCraft TH app icon: a page with the Thai letter ก and a red PDF label, on navy" width="128">
+<img src="pdfcraft-small.svg" alt="pdfคับ app icon: the word pdfคับ in white on a red page with a folded corner" width="128">
 
-**Design:** a page with a folded corner, the Thai letter ก (the first letter of the Thai alphabet) and a red
-PDF label, on a navy rounded square. Plain polygons only, so the SVG and every PNG come from the same shapes.
+**Design:** the tile itself is a red page with its top right corner folded, carrying the word pdfคับ in white:
+pdf small at the top left, คับ large across the page. Red is the colour people already expect of a PDF. Plain
+polygons and one gradient, so the SVG and every PNG come from the same shapes.
 
-**Palette:** navy `#1e2a5e`, paper `#f7f4eb`, fold `#d8d2c0`, red `#b70228`.
+**Palette:** red `#f2382b` to `#c9150f` (top to bottom), white `#ffffff`, fold `#ff9d92`.
 
-**Tile:** `viewBox="0 0 512 512"`, a rounded square with `rx=112`. Windows and Linux icons use the full-bleed
-tile. macOS icons put it on Apple's grid (an 824 px body centred on a transparent 1024 px canvas).
+**Tile:** `viewBox="0 0 512 512"`, corners `r=112`. Windows and Linux icons are full bleed. macOS icons put it on
+Apple's grid (an 824 px body centred on a transparent 1024 px canvas).
 
-**Provenance:** original artwork for this edition, made with Claude. The letters ก, P, D and F are traced from
-Sarabun Bold (SIL OFL 1.1) and stored in `packaging/thai/logo-glyphs.json`. Licence: [LICENSE.txt](LICENSE.txt)
+**Provenance:** original artwork for this edition, made with Claude. The word is traced from Kodchasan Bold
+(SIL OFL 1.1) and stored in `packaging/thai/logo-glyphs.json`. Licence: [LICENSE.txt](LICENSE.txt)
 (`MIT OR Apache-2.0`, like the repo). The upstream lion icon is not used here.
 
 ## Files
@@ -45,5 +46,5 @@ python3 packaging/thai/make-logo.py          # needs Pillow; iconutil (macOS) fo
 cargo xtask assets --write                   # make-logo.py already updated the sha256 values in ATTRIBUTION.toml
 ```
 
-`--trace` first re-traces the letters from Sarabun Bold (macOS keeps it among its system fonts); without it the
+`--trace` first re-traces the word from Kodchasan Bold (macOS keeps it among its system fonts); without it the
 stored outlines are used, so the font is not needed.
