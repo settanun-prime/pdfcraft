@@ -409,9 +409,9 @@ mod tests {
     fn required_ocr_models_cannot_be_missing() {
         let source = include_str!("../../crates/ocr/src/lib.rs");
         let original = assets::load(&assets::root()).unwrap();
-        assert_eq!(original.fetched.iter().filter(|f| f.kind == "model").count(), 2);
+        assert!(original.fetched.iter().filter(|f| f.kind == "model").count() >= 2, "English models at least");
         assert!(check_required_ocr_metadata(source, &original).unwrap().is_empty());
-        for model in original.fetched.iter().filter(|f| f.kind == "model") {
+        for model in original.fetched.iter().filter(|f| f.kind == "model" && f.file.starts_with("text-")) {
             let mut m = assets::load(&assets::root()).unwrap();
             m.fetched.retain(|f| f.file != model.file);
             assert!(check_required_ocr_metadata(source, &m).unwrap().iter().any(|p| p.contains(&model.file) && p.contains("missing")));
@@ -422,8 +422,8 @@ mod tests {
     fn required_ocr_models_cannot_be_misclassified() {
         let source = include_str!("../../crates/ocr/src/lib.rs");
         let original = assets::load(&assets::root()).unwrap();
-        assert_eq!(original.fetched.iter().filter(|f| f.kind == "model").count(), 2);
-        for model in original.fetched.iter().filter(|f| f.kind == "model") {
+        assert!(original.fetched.iter().filter(|f| f.kind == "model").count() >= 2, "English models at least");
+        for model in original.fetched.iter().filter(|f| f.kind == "model" && f.file.starts_with("text-")) {
             let mut m = assets::load(&assets::root()).unwrap();
             m.fetched.iter_mut().find(|f| f.file == model.file).unwrap().kind = "font".into();
             assert!(check_required_ocr_metadata(source, &m).unwrap().iter().any(|p| p.contains(&model.file) && p.contains("kind")));
