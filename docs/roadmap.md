@@ -290,6 +290,7 @@ Estimates unchanged.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-29 | minor | M10: a PP-OCR line wider than the recogniser is read in pieces at word gaps, so one long line no longer skips the page. Estimates unchanged. |
 | 2026-10-31 | patch | #1577: reconcile optional page shadows with current viewer/organizer and settings modules; CI validation pending. |
 | 2026-10-31 | patch | M3 #1354: reconcile the launch override with split app/file modules and the structured open result; preserve headless help/version exits. CI validation pending. |
 | 2026-10-31 | patch | M2, PR #4172: eight GBK font/alias cases compare exact pixels with independent installed-face and explicit-Unicode references; wrong-glyph and wrong-family negative controls fail. Estimates unchanged. |
