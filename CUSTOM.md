@@ -30,7 +30,7 @@ Branch `custom/thai-no-ads` เพิ่มสี่เรื่องจาก�
 | font ตอนแสดงบนจอ | อ่าน font ที่ติดตั้งในเครื่องมาวาดบนจอเป็นเรื่องปกติ ไม่คัดลอก ไม่แจก | ใช้ Sukhumvit Set, Sathu, Tahoma แสดงบนจอเท่านั้น |
 | font ตอนเขียนลง PDF | ลงไปในไฟล์ที่ส่งต่อได้ จึงต้องมีสัญญาเปิด (`embedding::validate_document_input`) | เขียนด้วย Sarabun หรือ Noto Sans Thai (OFL) เท่านั้น Tahoma และ font ที่มากับ Word ไม่ถูกฝัง แม้ font จะอนุญาตให้ฝังก็ตาม |
 
-**ยังไม่ได้ทำความสะอาด** ชื่อ ArtCraft ที่เป็นข้อความธรรมดายังอยู่ใน `packaging/` (installer ของ Windows, metainfo ของ Linux, flatpak), ไฟล์แปลภาษาใน `crates/ui-egui/src/i18n/`, `AGENTS.md`, `ROADMAP.md` และ `docs/` เราไม่ได้ใช้ไฟล์เหล่านี้ใน `PdfCraft TH.app` ก่อนจะสร้าง installer หรือแจกไฟล์ติดตั้งจาก branch นี้ ต้องแก้ไฟล์ใน `packaging/` ให้ไม่ใช้ชื่อ ArtCraft เป็นผู้เผยแพร่ก่อน ตัว build ฟรีของเรา (`.github/workflows/thai-build.yml`) ไม่ใช้ไฟล์เหล่านั้น: Mac ใช้ `package.sh` กับ `Credits.rtf` ที่เราแก้แล้ว ส่วน Windows ทำแค่ zip แบบพกพา ไม่ทำ MSI
+**ยังไม่ได้ทำความสะอาด** ชื่อ ArtCraft ที่เป็นข้อความธรรมดายังอยู่ใน `packaging/` (installer ของ Windows, metainfo ของ Linux, flatpak), ไฟล์แปลภาษาใน `crates/ui-egui/src/i18n/`, `AGENTS.md`, `ROADMAP.md` และ `docs/` เราไม่ได้ใช้ไฟล์เหล่านี้ใน `PdfCraft TH.app` ก่อนจะสร้าง installer หรือแจกไฟล์ติดตั้งจาก branch นี้ ต้องแก้ไฟล์ใน `packaging/` ให้ไม่ใช้ชื่อ ArtCraft เป็นผู้เผยแพร่ก่อน ตัว build ฟรีของเรา (`.github/workflows/thai-build.yml`) ไม่ใช้ไฟล์เหล่านั้น: Mac ใช้ `package.sh` กับ `Credits.rtf` ที่เราแก้แล้ว ส่วน Windows ทำแค่ `pdfcraft.exe` ตัวเดียว ไม่ทำ MSI
 
 ## เวลาต้นทางมี update
 
@@ -158,8 +158,8 @@ cargo xtask assets --write
 
 | ระบบ | ได้อะไร | วิธีทำ |
 |---|---|---|
-| Mac (Apple silicon) | DMG กับ zip ของ CLI ลงชื่อแบบ ad hoc ไม่ผ่าน notarize | `packaging/macos/package.sh --arch aarch64` ของต้นทาง |
-| Windows x64 | zip แบบพกพา (exe, CLI, ใบอนุญาต, models, `portable.txt`) ไม่มี MSI เพราะไฟล์ WiX ใช้ชื่อ ArtCraft | `packaging/thai/windows-portable.ps1` |
+| Mac (Apple silicon) | DMG อย่างเดียว (ไม่แจก zip ของ CLI) ลงชื่อแบบ ad hoc ไม่ผ่าน notarize | `packaging/macos/package.sh --arch aarch64` ของต้นทาง |
+| Windows x64 | `pdfcraft.exe` ตัวเดียว (ไม่มี CLI, ไม่มี models ถ้าอยากได้ OCR ละตินให้วางโฟลเดอร์ `models\` ไว้ข้างกัน) กับไฟล์ข้อความรวมใบอนุญาต ไม่มี MSI เพราะไฟล์ WiX ใช้ชื่อ ArtCraft | `packaging/thai/windows-exe.ps1` |
 
 ทุก build ตั้ง `PDFCRAFT_BUILD_LABEL=thai` ให้ `--version` และหน้า About บอกว่าเป็นฉบับนี้ ไฟล์ไม่ได้ลงชื่อ จึงต้องเตือนผู้ใช้ว่า macOS (Gatekeeper) และ Windows (SmartScreen) จะถามยืนยันก่อนเปิด ผลลัพธ์เก็บเป็น artifact 7 วันและ repo เป็นสาธารณะ ใครล็อกอิน GitHub ก็โหลดได้ ก่อนรันให้รัน `python3 packaging/custom-check.py` ให้ผ่านก่อน
 
