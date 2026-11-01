@@ -3,9 +3,14 @@ name: Thai build
 # Our own build of the Thai edition on GitHub's free runners. This repository is public, so the
 # minutes are not charged. It stands in for upstream's release.yml, which needs Apple and Azure
 # signing secrets and a paid large macOS runner. Nothing here is signed or notarized;
-# artifacts are kept for 7 days. Start it by hand (Actions > Thai build > Run workflow).
+# artifacts are kept for 7 days. Start it by pushing a tag named thai-v<version>-<n>, for example
+# `git tag thai-v0.16.1-1 && git push origin thai-v0.16.1-1`. A tag run reads this file from the
+# tagged commit, so it works from the custom branch; the Run workflow button only lists files on
+# the default branch, which stays a clean mirror of upstream.
 
 on:
+  push:
+    tags: ["thai-v*"]
   workflow_dispatch:
 
 permissions:

@@ -154,7 +154,7 @@ cargo xtask assets --write
 
 ## Build และแจกไฟล์ (ฟรี ไม่ลงชื่อ)
 
-ไม่ใช้ `release.yml` ของต้นทาง เพราะบน branch `release` มันบังคับลงชื่อและ notarize ด้วยบัญชี Apple กับ Azure ที่เราไม่มี และ job ของ Mac ใช้เครื่องขนาดใหญ่ที่เสียเงิน ห้ามสร้าง branch ชื่อ `release` ใน fork นี้ เราใช้ `.github/workflows/thai-build.yml` ซึ่งรันเฉพาะตอนสั่งเอง (Actions > Thai build > Run workflow) บนเครื่องมาตรฐานของ GitHub (`macos-latest`, `windows-latest`) ซึ่ง repo สาธารณะใช้ฟรี ถ้าเปลี่ยน `runs-on` ให้ตรวจก่อนว่าเครื่องนั้นฟรี `custom-check.py` จะแจ้งถ้าไฟล์นี้มีเครื่องขนาดใหญ่
+ไม่ใช้ `release.yml` ของต้นทาง เพราะบน branch `release` มันบังคับลงชื่อและ notarize ด้วยบัญชี Apple กับ Azure ที่เราไม่มี และ job ของ Mac ใช้เครื่องขนาดใหญ่ที่เสียเงิน ห้ามสร้าง branch ชื่อ `release` ใน fork นี้ เราใช้ `.github/workflows/thai-build.yml` ซึ่งรันเฉพาะตอน push tag ชื่อ `thai-v<เวอร์ชัน>-<เลข>` (เช่น `git tag thai-v0.16.1-1` แล้ว `git push origin thai-v0.16.1-1`) บนเครื่องมาตรฐานของ GitHub (`macos-latest`, `windows-latest`) ซึ่ง repo สาธารณะใช้ฟรี ใช้ tag เพราะปุ่ม Run workflow ของ GitHub แสดงเฉพาะ workflow ที่อยู่บน branch หลัก (`main`) ซึ่งเราเก็บเป็นสำเนาต้นทางล้วน ๆ ถ้าเปลี่ยน `runs-on` ให้ตรวจก่อนว่าเครื่องนั้นฟรี `custom-check.py` จะแจ้งถ้าไฟล์นี้มีเครื่องขนาดใหญ่
 
 | ระบบ | ได้อะไร | วิธีทำ |
 |---|---|---|
