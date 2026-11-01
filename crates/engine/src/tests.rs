@@ -5364,6 +5364,54 @@ fn chinese_ocr_makes_mixed_scans_searchable() {
     assert_eq!(page_texts(&s, id), [""]);
 }
 
+/// A generated Thai scan reads back as Thai, stays searchable after a save, and the page's pixels
+/// do not change. The fixture needs an openly licensed Thai font on the machine.
+#[test]
+fn thai_ocr_makes_scans_searchable() {
+    use ab_glyph::{Font, FontRef, PxScale, ScaleFont, point};
+    if !ocr::available_for("th") {
+        eprintln!("skipped: Thai OCR models not installed");
+        return;
+    }
+    let Some(face) = pdfcraft_fonts::installed_thai_font() else {
+        eprintln!("skipped: no openly licensed Thai font is installed");
+        return;
+    };
+    let font = FontRef::try_from_slice(face.bytes).unwrap();
+    let scaled = font.as_scaled(PxScale::from(64.0));
+    let mut image = image::RgbaImage::from_pixel(1000, 160, image::Rgba([255; 4]));
+    let mut x = 40.0;
+    for ch in "กรุงเทพ 2569 ใบประกาศ".chars() {
+        let id = scaled.glyph_id(ch);
+        assert_ne!(id.0, 0, "fixture font must cover {ch}");
+        if let Some(outline) = font.outline_glyph(id.with_scale_and_position(64.0, point(x, 105.0))) {
+            let bounds = outline.px_bounds();
+            outline.draw(|gx, gy, coverage| {
+                let (px, py) = (bounds.min.x as i32 + gx as i32, bounds.min.y as i32 + gy as i32);
+                if px >= 0 && py >= 0 && px < 1000 && py < 160 {
+                    let v = (255.0 * (1.0 - coverage)) as u8;
+                    image.put_pixel(px as u32, py as u32, image::Rgba([v, v, v, 255]));
+                }
+            });
+        }
+        x += scaled.h_advance(id);
+    }
+    let mut png = std::io::Cursor::new(Vec::new());
+    image.write_to(&mut png, image::ImageFormat::Png).unwrap();
+    let mut s = Session::new();
+    let scan = s.create_from_images(&[("original.png".into(), png.into_inner())]).unwrap();
+    let id = s.open("scan.pdf", None, scan, None).unwrap();
+    let before = export::Exporter::new(s.get(id).unwrap()).png(0, 72.0).unwrap();
+    let found = s.recognize_text(id, &[], ocr::OcrSettings { language: "th".into(), ..Default::default() }).unwrap();
+    assert_eq!(found[0].skipped, None);
+    let text = found[0].text().replace(' ', "");
+    assert!(text.contains("กรุงเทพ") && text.contains("2569") && text.contains("ใบประกาศ"), "{text:?}");
+    assert_eq!(export::Exporter::new(s.get(id).unwrap()).png(0, 72.0).unwrap(), before, "the text is invisible");
+    let saved = s.save_bytes(id).unwrap();
+    let reopened = s.open("result.pdf", None, saved, None).unwrap();
+    assert!(page_texts(&s, reopened)[0].replace(' ', "").contains("กรุงเทพ"), "Thai survives save and reopen");
+}
+
 #[test]
 fn latin_ocr_keeps_german_accents_searchable() {
     use ab_glyph::{Font, FontRef, PxScale, ScaleFont, point};

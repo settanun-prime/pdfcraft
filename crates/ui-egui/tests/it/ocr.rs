@@ -47,6 +47,7 @@ fn recognize_text_dialog_adds_searchable_text() {
 fn chinese_ocr_language_runs_from_the_dialog() {
     let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(|_cc| {
         let mut app = PdfCraftApp::new();
+        app.set_option("language", "en").unwrap();
         app.open_bytes("scan.pdf", None, scan()).unwrap();
         app.run_inline = true;
         app
@@ -54,7 +55,7 @@ fn chinese_ocr_language_runs_from_the_dialog() {
     h.run_steps(4);
     assert!(h.state_mut().execute("ocr.recognize"));
     h.run_steps(2);
-    h.get_by_value("English").click();
+    h.get_by_value(opening_language()).click();
     h.run_steps(2);
     h.get_by_label("Chinese (Simplified) and English").click();
     // The menu closes on the following frame. A click before that hits the menu.
@@ -78,6 +79,7 @@ fn chinese_ocr_language_runs_from_the_dialog() {
 fn german_is_a_document_language() {
     let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(|_cc| {
         let mut app = PdfCraftApp::new();
+        app.set_option("language", "en").unwrap();
         app.open_bytes("scan.pdf", None, scan()).unwrap();
         app.run_inline = true;
         app
@@ -85,7 +87,7 @@ fn german_is_a_document_language() {
     h.run_steps(4);
     assert!(h.state_mut().execute("ocr.recognize"));
     h.run_steps(2);
-    h.get_by_value("English").click();
+    h.get_by_value(opening_language()).click();
     h.run_steps(2);
     h.get_by_label("German").click();
     h.run_steps(1);
@@ -96,6 +98,7 @@ fn german_is_a_document_language() {
 #[test]
 fn recognition_that_cannot_start_a_thread_reports_an_error_and_can_retry() {
     let mut app = PdfCraftApp::new();
+    app.set_option("language", "en").unwrap();
     app.open_bytes("scan.pdf", None, scan()).unwrap();
     app.fail_spawn = true;
     app.start_ocr();
@@ -121,6 +124,7 @@ fn recognition_that_cannot_start_a_thread_reports_an_error_and_can_retry() {
 fn latin_ocr_language_runs_from_the_dialog() {
     let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(|_cc| {
         let mut app = PdfCraftApp::new();
+        app.set_option("language", "en").unwrap();
         app.open_bytes("scan.pdf", None, scan()).unwrap();
         app.run_inline = true;
         app
@@ -128,7 +132,7 @@ fn latin_ocr_language_runs_from_the_dialog() {
     h.run_steps(4);
     assert!(h.state_mut().execute("ocr.recognize"));
     h.run_steps(2);
-    h.get_by_value("English").click();
+    h.get_by_value(opening_language()).click();
     h.run_steps(2);
     h.get_by_label("Latin (accented)").click();
     // The menu closes on the following frame. A click before that hits the menu.
@@ -152,6 +156,7 @@ fn latin_ocr_language_runs_from_the_dialog() {
 fn recognize_text_dialog_reads_a_line_wider_than_the_recogniser() {
     let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(|_cc| {
         let mut app = PdfCraftApp::new();
+        app.set_option("language", "en").unwrap();
         app.ocr_draft.dpi = 600;
         app.open_bytes("wide.pdf", None, wide_scan()).unwrap();
         app.run_inline = true;
@@ -160,7 +165,7 @@ fn recognize_text_dialog_reads_a_line_wider_than_the_recogniser() {
     h.run_steps(4);
     assert!(h.state_mut().execute("ocr.recognize"));
     h.run_steps(2);
-    h.get_by_value("English").click();
+    h.get_by_value(opening_language()).click();
     h.run_steps(2);
     h.get_by_label("Latin (accented)").click();
     h.run_steps(2);
@@ -573,4 +578,9 @@ fn only_the_edit_tool_recognizes_a_scanned_page() {
     let id = h.state().active_ids().unwrap().1;
     h.run_steps(6);
     assert_eq!(h.state().session.get(id).unwrap().can_undo(), None);
+}
+
+/// The language the dialog opens on: Thai when its model is installed, otherwise English.
+fn opening_language() -> &'static str {
+    if pdfcraft_engine::ocr::available_for("th") { "Thai and English" } else { "English" }
 }

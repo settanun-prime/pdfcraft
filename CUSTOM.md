@@ -129,6 +129,7 @@ git push origin custom/thai-no-ads
 | `ATTRIBUTION.toml`, `ATTRIBUTION.md` | ลบรายการของ `docs/brand/*` และ `pdfcraft-tools.png` และรายการไอคอนเป็นของเรา (ผู้สร้าง ที่มา และ hash) | รวมรายการใหม่ของต้นทางเข้ามา ห้ามเอารายการ `docs/brand/*` กลับมา แล้วรัน `cargo xtask assets --write` |
 | `packaging/macos/Credits.rtf` | ข้อความเป็นของเรา ไม่มีลิงก์ Discord หรือเว็บ ArtCraft และบอกว่าเป็นฉบับไม่เป็นทางการ | เอาของเรา ถ้าต้นทางแก้ไฟล์นี้ให้ดูว่าเพิ่มลิงก์โปรโมทไหม แล้วรับเฉพาะส่วนที่ไม่ใช่โปรโมท |
 | `LICENSES.toml` | hash ของ `assets/app-icon/LICENSE.txt` เปลี่ยนเป็นของข้อความใบอนุญาตไอคอนใหม่ของเรา (ด่าน `license-check` บังคับให้ hash ตรง) | ถ้าโดน conflict ให้รับของต้นทางทั้งไฟล์ แล้วแก้บรรทัด `sha256` ของรายการ `assets/app-icon/LICENSE.txt` เป็นค่าจาก `shasum -a 256 assets/app-icon/LICENSE.txt` |
+| `crates/ocr/`, `crates/engine/src/ocr/`, `crates/ui-egui/src/workflows/ocr_ui.rs` | รวม PR #2520 ของต้นทาง (ยังไม่ถูก merge ที่ต้นทาง) แล้วเติมภาษาไทย: `THAI_MODEL`, การเผื่อขอบและกรองความมั่นใจใน `ppocr.rs`, `crates/ocr/build.rs` ฝังโมเดลลง exe, ค่าเริ่มต้นภาษาไทยในหน้าต่าง OCR และ `layer.rs` เปลี่ยนจาก Type 3 เป็น Type 0 ที่มีฟอนต์ว่าง เพราะ PDFKit ของ Apple มองไม่เห็นข้อความใน Type 3 ว่าง | ถ้าต้นทาง merge #2520 ให้รับของต้นทาง แล้วเก็บ 4 จุดนี้ไว้ อย่าเอา Type 3 กลับมา |
 | `.github/workflows/thai-build.yml`, `packaging/thai/` | ไฟล์ของเราเอง ต้นทางไม่มี จึงไม่ชน | เก็บไว้ทั้งหมด |
 
 test ที่เราแก้ตามไปด้วย: `crates/edit/src/tests.rs`, `crates/engine/src/links/tests.rs` และ `crates/ui-egui/tests/it/` (`content.rs`, `editing.rs`, `fonts.rs`, `links.rs`, `ui.rs`)
@@ -160,7 +161,7 @@ cargo xtask assets --write
 | ระบบ | ได้อะไร | วิธีทำ |
 |---|---|---|
 | Mac (Apple silicon) | DMG อย่างเดียว (ไม่แจก zip ของ CLI) ลงชื่อแบบ ad hoc ไม่ผ่าน notarize | `packaging/macos/package.sh --arch aarch64` ของต้นทาง |
-| Windows x64 | `pdfcraft.exe` ตัวเดียว (ไม่มี CLI, ไม่มี models ถ้าอยากได้ OCR ละตินให้วางโฟลเดอร์ `models\` ไว้ข้างกัน) กับไฟล์ข้อความรวมใบอนุญาต ไม่มี MSI เพราะไฟล์ WiX ใช้ชื่อ ArtCraft | `packaging/thai/windows-exe.ps1` |
+| Windows x64 | `pdfcraft.exe` ตัวเดียว (ไม่มี CLI) ฝังโมเดล OCR อังกฤษและไทยไว้ข้างใน (`PDFCRAFT_EMBED_MODELS`) กับไฟล์ข้อความรวมใบอนุญาต ไม่มี MSI เพราะไฟล์ WiX ใช้ชื่อ ArtCraft | `packaging/thai/windows-exe.ps1` |
 
 ทุก build ตั้ง `PDFCRAFT_BUILD_LABEL=thai` ให้ `--version` และหน้า About บอกว่าเป็นฉบับนี้ ไฟล์ไม่ได้ลงชื่อ จึงต้องเตือนผู้ใช้ว่า macOS (Gatekeeper) และ Windows (SmartScreen) จะถามยืนยันก่อนเปิด ผลลัพธ์เก็บเป็น artifact 7 วันและ repo เป็นสาธารณะ ใครล็อกอิน GitHub ก็โหลดได้ ก่อนรันให้รัน `python3 packaging/custom-check.py` ให้ผ่านก่อน
 
@@ -256,5 +257,5 @@ cargo run -p pdfcraft -- ไฟล์.pdf
 - ตัวหนาและตัวเอียงตอนเขียนไทยลง PDF: ใช้ face Regular อย่างเดียว
 - Edit Text กับข้อความที่หมุนอยู่ หรือการเปลี่ยนตัวหนาหรือ font พร้อมกับพิมพ์ไทย จะขึ้น error
 - หน้า PDF ที่ไม่ฝัง font แก้เฉพาะตอนดูบนจอ ไม่รวมตอนพิมพ์หรือ export และต้องเป็น font ชนิด CID ที่ชื่อเป็น font ไทย
-- OCR ภาษาไทยยังไม่มี (OCR ของแอปอ่านได้แต่ตัวละติน ทั้งของต้นทางและของเรา) ตัวเลือก ขนาด และแผนอยู่ใน `docs/thai-ocr-plan.md`
+- OCR ภาษาไทยทำให้ค้นหาและคัดลอกข้อความได้ แต่ยังแก้ข้อความในภาพไม่ได้ และอ่านผิดได้ ดู `docs/thai-ocr-plan.md`
 - ไฟล์ติดตั้ง Linux (nfpm, flatpak) และ MSI ของ Windows ยังใช้ชื่อ ArtCraft ใน `packaging/` เราจึงยังไม่สร้างสองอย่างนี้ ดูหัวข้อ "Build และแจกไฟล์"

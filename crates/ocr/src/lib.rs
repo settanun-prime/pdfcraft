@@ -26,12 +26,20 @@ pub const CHINESE_MODEL: &str = "chinese-recognition.onnx";
 pub const CHINESE_DICTIONARY: &str = "chinese-keys.txt";
 pub const LATIN_MODEL: &str = "latin-recognition.onnx";
 pub const LATIN_DICTIONARY: &str = "latin-keys.txt";
+pub const THAI_MODEL: &str = "thai-recognition.onnx";
+pub const THAI_DICTIONARY: &str = "thai-keys.txt";
+/// Thai reads best with a margin around the line for its marks, and artwork on a certificate reads
+/// as scattered letters that score far below real text (measured on a scanned certificate: text
+/// 0.82 to 0.97, decorations mostly under 0.6).
+const THAI_PADDING: f32 = 0.15;
+const THAI_MIN_SCORE: f32 = 0.6;
 
 /// The PP-OCR languages: (code, model file, dictionary file, output classes = CTC blank +
 /// one per dictionary line + the appended space). The class count is pinned per model, so a
 /// wrong or truncated dictionary fails at load instead of decoding garbage.
 const PP_OCR: &[(&str, &str, &str, usize)] = &[
     ("zh", CHINESE_MODEL, CHINESE_DICTIONARY, 6625),
+    ("th", THAI_MODEL, THAI_DICTIONARY, 526),
     ("la", LATIN_MODEL, LATIN_DICTIONARY, 504),
     ("fr", LATIN_MODEL, LATIN_DICTIONARY, 504),
     ("de", LATIN_MODEL, LATIN_DICTIONARY, 504),
@@ -60,6 +68,7 @@ pub const LANGUAGES: &[(&str, &str)] = &[
     ("en", "English"),
     ("zh", "Chinese (Simplified) and English"),
     ("la", "Latin (accented)"),
+    ("th", "Thai and English"),
     ("fr", "French"),
     ("de", "German"),
     ("es", "Spanish"),
@@ -135,10 +144,12 @@ impl Models {
     /// the two. Other languages use that same detector with their own recognition model and dictionary.
     pub fn in_dir_for(dir: &Path, language: &str) -> Option<Models> {
         let language = LANGUAGES.iter().find(|l| l.0 == language)?.0;
-        let english = [(DETECTION_MODEL, RECOGNITION_MODEL), ("text-detection.rten", "text-recognition.rten")].into_iter().find_map(|(detection, recognition)| {
-            let m = Models { detection: dir.join(detection), recognition: dir.join(recognition), language };
-            (m.detection.is_file() && m.recognition.is_file()).then_some(m)
-        });
+        let english = [(DETECTION_MODEL, RECOGNITION_MODEL), ("text-detection.rten", "text-recognition.rten")].into_iter().find_map(
+            |(detection, recognition)| {
+                let m = Models { detection: dir.join(detection), recognition: dir.join(recognition), language };
+                (m.detection.is_file() && m.recognition.is_file()).then_some(m)
+            },
+        );
         if language == "en" {
             return english;
         }
@@ -146,9 +157,10 @@ impl Models {
         if !dir.join(dictionary).is_file() || !dir.join(model).is_file() {
             return None;
         }
-        let detection = english.as_ref().map(|m| m.detection.clone()).or_else(|| {
-            [DETECTION_MODEL, "text-detection.rten"].into_iter().map(|name| dir.join(name)).find(|path| path.is_file())
-        })?;
+        let detection = english
+            .as_ref()
+            .map(|m| m.detection.clone())
+            .or_else(|| [DETECTION_MODEL, "text-detection.rten"].into_iter().map(|name| dir.join(name)).find(|path| path.is_file()))?;
         Some(Models { detection, recognition: dir.join(model), language })
     }
 
@@ -171,6 +183,7 @@ impl Models {
         if let Some(exe) = std::env::current_exe().ok().and_then(|e| e.parent().map(Path::to_path_buf)) {
             dirs.extend(Self::dirs_beside_exe(&exe));
         }
+        dirs.extend(embedded_dir());
         dirs.push(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets/models"));
         dirs
     }
@@ -184,6 +197,32 @@ impl Models {
     pub fn dirs_beside_exe(exe_dir: &Path) -> Vec<PathBuf> {
         vec![exe_dir.join("models"), exe_dir.join("../Resources/models"), exe_dir.join("../share/pdfcraft/models")]
     }
+}
+
+include!(concat!(env!("OUT_DIR"), "/embedded_models.rs"));
+
+/// The folder holding the models compiled into this program (`PDFCRAFT_EMBED_MODELS`, the one-file
+/// Windows build), written out once per version because the recognisers load from files.
+fn embedded_dir() -> Option<PathBuf> {
+    static DIR: std::sync::OnceLock<Option<PathBuf>> = std::sync::OnceLock::new();
+    DIR.get_or_init(|| {
+        if EMBEDDED.is_empty() {
+            return None;
+        }
+        let base = std::env::var_os("LOCALAPPDATA").map_or_else(std::env::temp_dir, PathBuf::from);
+        let dir = base.join("PdfCraft").join("models").join(env!("CARGO_PKG_VERSION"));
+        std::fs::create_dir_all(&dir).ok()?;
+        for (name, bytes) in EMBEDDED {
+            let path = dir.join(name);
+            if !std::fs::metadata(&path).is_ok_and(|m| m.len() == bytes.len() as u64) {
+                let part = dir.join(format!("{name}.{}.part", std::process::id()));
+                std::fs::write(&part, bytes).ok()?;
+                std::fs::rename(&part, &path).ok()?;
+            }
+        }
+        Some(dir)
+    })
+    .clone()
 }
 
 /// A recognised text segment and its box in image pixels `[left, top, right, bottom]`.
@@ -251,7 +290,8 @@ impl Ocr {
             .iter()
             .find(|(_, model, _, _)| *model == name)
             .map(|(_, _, dictionary, classes)| ppocr::PpOcr::load(&models.recognition, &models.recognition.with_file_name(dictionary), *classes))
-            .transpose()?;
+            .transpose()?
+            .map(|p| if name == THAI_MODEL { p.tuned(THAI_PADDING, THAI_MIN_SCORE) } else { p });
         let params = ocrs::OcrEngineParams {
             detection_model: Some(load(&models.detection)?),
             recognition_model: if ppocr.is_none() { Some(load(&models.recognition)?) } else { None },
@@ -506,7 +546,8 @@ mod tests {
         for file in ["text-detection.onnx", "text-recognition.onnx"] {
             std::fs::write(dir.path().join(file), b"model").unwrap();
         }
-        let expected = Some(Models { detection: dir.path().join("text-detection.onnx"), recognition: dir.path().join("text-recognition.onnx"), language: "en" });
+        let expected =
+            Some(Models { detection: dir.path().join("text-detection.onnx"), recognition: dir.path().join("text-recognition.onnx"), language: "en" });
         assert_eq!(Models::in_dir(dir.path()), expected, "a complete ONNX pair is sufficient");
         for file in ["text-detection.rten", "text-recognition.rten"] {
             std::fs::write(dir.path().join(file), b"model").unwrap();
@@ -524,7 +565,11 @@ mod tests {
             }
             assert_eq!(
                 Models::in_dir(dir.path()),
-                Some(Models { detection: dir.path().join("text-detection.rten"), recognition: dir.path().join("text-recognition.rten"), language: "en" }),
+                Some(Models {
+                    detection: dir.path().join("text-detection.rten"),
+                    recognition: dir.path().join("text-recognition.rten"),
+                    language: "en"
+                }),
                 "{current} alone must not hide a complete legacy pair"
             );
         }
@@ -642,7 +687,9 @@ mod tests {
     fn named_european_languages_use_the_latin_model() {
         let dir = std::env::temp_dir().join(format!("pdfcraft-ocr-langs-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
-        for file in [DETECTION_MODEL, RECOGNITION_MODEL, LATIN_MODEL, LATIN_DICTIONARY, CHINESE_MODEL, CHINESE_DICTIONARY] {
+        for file in
+            [DETECTION_MODEL, RECOGNITION_MODEL, LATIN_MODEL, LATIN_DICTIONARY, CHINESE_MODEL, CHINESE_DICTIONARY, THAI_MODEL, THAI_DICTIONARY]
+        {
             std::fs::write(dir.join(file), b"x").unwrap();
         }
         for (code, _) in LANGUAGES {
@@ -651,11 +698,13 @@ mod tests {
                 RECOGNITION_MODEL
             } else if *code == "zh" {
                 CHINESE_MODEL
+            } else if *code == "th" {
+                THAI_MODEL
             } else {
                 LATIN_MODEL
             };
             assert!(models.recognition.ends_with(expect), "{code}: {}", models.recognition.display());
-            if !matches!(*code, "en" | "zh" | "la") {
+            if !matches!(*code, "en" | "zh" | "th" | "la") {
                 assert!(!preferred_letters(code).is_empty(), "{code} has no preferred letters");
             }
         }
@@ -664,6 +713,26 @@ mod tests {
         assert!(Models::in_dir_for(&dir, "xx").is_none());
         assert!(matches!(Ocr::find_for("xx"), Err(OcrError::Language(_))));
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// Nothing is compiled in unless a build asks for it, so ordinary builds write no files.
+    #[test]
+    fn an_ordinary_build_has_no_embedded_models() {
+        assert!(EMBEDDED.is_empty() || option_env!("PDFCRAFT_EMBED_MODELS").is_some());
+        if EMBEDDED.is_empty() {
+            assert_eq!(embedded_dir(), None);
+        }
+    }
+
+    /// The Thai dictionary matches the model it ships with, and reads as Thai. Skipped when the
+    /// model has not been fetched.
+    #[test]
+    fn the_thai_model_loads_with_its_dictionary() {
+        let Some(models) = Models::find_for("th") else {
+            eprintln!("skipped: Thai OCR models not installed");
+            return;
+        };
+        Ocr::load(&models).unwrap();
     }
 
     /// A language can only prefer a letter the Latin dictionary actually contains.
@@ -730,6 +799,7 @@ mod tests {
             ("pl", "ąćęłńóśźżĄĆĘŁŃÓŚŹŻ"),
             ("en", ""),
             ("zh", ""),
+            ("th", ""),
             ("la", ""),
         ];
         assert_eq!(

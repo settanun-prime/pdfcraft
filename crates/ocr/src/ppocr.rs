@@ -15,6 +15,11 @@ const MAX_WIDTH: usize = 4096;
 pub(crate) struct PpOcr {
     model: rten::Model,
     alphabet: Vec<char>,
+    /// Extra crop around a line, as a fraction of its height. Thai marks stand above and below
+    /// the line the detector boxes, and the model reads them better with a margin.
+    padding: f32,
+    /// Lines the model is less sure of than this are dropped as artwork, not text. 0 keeps all.
+    min_score: f32,
 }
 
 impl PpOcr {
@@ -35,6 +40,11 @@ impl PpOcr {
         let text = std::str::from_utf8(&bytes).map_err(|e| load(dictionary, &e))?;
         let mut alphabet = vec!['\0']; // CTC blank, not a printable character.
         for line in text.lines() {
+            // PaddleOCR's Thai dictionary lost a newline here; the model's own list has them apart.
+            if line == "ωก" {
+                alphabet.extend(['ω', 'ก']);
+                continue;
+            }
             let mut chars = line.chars();
             let c = chars.next().filter(|c| !c.is_control()).ok_or_else(|| load(dictionary, &"invalid character entry"))?;
             if chars.next().is_some() {
@@ -47,7 +57,12 @@ impl PpOcr {
             return Err(load(dictionary, &format!("the model has {classes} output classes but the dictionary gives {}", alphabet.len())));
         }
         let model = rten::Model::load_file(model).map_err(|e| load(model, &e))?;
-        Ok(Self { model, alphabet })
+        Ok(Self { model, alphabet, padding: 0.0, min_score: 0.0 })
+    }
+
+    /// Read with a margin of `padding` line heights and drop lines scoring under `min_score`.
+    pub fn tuned(self, padding: f32, min_score: f32) -> Self {
+        Self { padding, min_score, ..self }
     }
 
     pub fn recognize(&self, rgb: &[u8], width: u32, height: u32, rect: [f32; 4], preferred: &str) -> Result<String, OcrError> {
@@ -55,7 +70,13 @@ impl PpOcr {
         if values.is_empty() {
             return Ok(String::new());
         }
-        decode(&values, &self.alphabet, preferred)
+        let text = decode(&values, &self.alphabet, preferred)?;
+        // A lone character needs a clear lead: decorations read as single letters.
+        let needed = if text.chars().count() == 1 { self.min_score.max(LONE_CHARACTER_SCORE) } else { self.min_score };
+        if self.min_score > 0.0 && score(&values, self.alphabet.len()) < needed {
+            return Ok(String::new());
+        }
+        Ok(text)
     }
 
     /// One score per class for every time step. An empty crop is an empty vector.
@@ -64,10 +85,11 @@ impl PpOcr {
         if !rect.iter().all(|x| x.is_finite()) {
             return Err(OcrError::Recognize("non-finite text box".into()));
         }
-        let left = (left.floor() - 2.0).max(0.0) as usize;
-        let top = (top.floor() - 2.0).max(0.0) as usize;
-        let right = (right.ceil() + 2.0).clamp(0.0, width as f32) as usize;
-        let bottom = (bottom.ceil() + 2.0).clamp(0.0, height as f32) as usize;
+        let pad = 2.0_f32.max((bottom - top) * self.padding);
+        let left = (left.floor() - pad).max(0.0) as usize;
+        let top = (top.floor() - pad).max(0.0) as usize;
+        let right = (right.ceil() + pad).clamp(0.0, width as f32) as usize;
+        let bottom = (bottom.ceil() + pad).clamp(0.0, height as f32) as usize;
         let (cw, ch) = (right.saturating_sub(left), bottom.saturating_sub(top));
         if cw == 0 || ch == 0 {
             return Ok(Vec::new());
@@ -120,6 +142,22 @@ fn input_width(cw: usize, ch: usize) -> usize {
 /// How close a preferred letter has to be, on the model's softmax probability, before it
 /// replaces the winner. A lead larger than this stays, including a letter from another language.
 const PREFERENCE_MARGIN: f32 = 0.1;
+
+/// What a one-character line has to score under [`PpOcr::tuned`].
+const LONE_CHARACTER_SCORE: f32 = 0.9;
+
+/// The model's mean probability over the time steps that are not the CTC blank.
+fn score(values: &[f32], classes: usize) -> f32 {
+    let (mut sum, mut count) = (0.0, 0u32);
+    for row in values.chunks_exact(classes) {
+        let (best, value) = row.iter().enumerate().fold((0, f32::MIN), |b, (i, v)| if *v > b.1 { (i, *v) } else { b });
+        if best != 0 {
+            sum += value;
+            count += 1;
+        }
+    }
+    if count == 0 { 0.0 } else { sum / count as f32 }
+}
 
 fn decode(values: &[f32], alphabet: &[char], preferred: &str) -> Result<String, OcrError> {
     if alphabet.is_empty() || !values.len().is_multiple_of(alphabet.len()) {
@@ -203,6 +241,28 @@ mod tests {
         assert!(at_limit.is_ok(), "{at_limit:?}");
         let err = ocr.recognize(&rgb, w, h, [f32::NAN, 0.0, 10.0, 10.0], "");
         assert!(err.as_ref().is_err_and(|e| e.to_string().contains("non-finite")), "{err:?}");
+    }
+
+    /// PaddleOCR's Thai dictionary has `ω` and `ก` on one line by mistake: the model's own list has
+    /// them apart, so they are two classes.
+    #[test]
+    fn the_joined_thai_dictionary_line_is_two_classes() {
+        let dir = tempfile::tempdir().unwrap();
+        let dict = dir.path().join("keys.txt");
+        std::fs::write(&dict, "a\nωก\nb\n").unwrap(); // blank + a + ω + ก + b + space = 6.
+        let Err(err) = PpOcr::load(&dir.path().join("missing.onnx"), &dict, 6) else { panic!("the model is missing") };
+        assert!(matches!(&err, OcrError::Load(p, _) if p.ends_with("missing.onnx")), "the dictionary is accepted: {err:?}");
+        std::fs::write(&dict, "a\nxy\n").unwrap();
+        let Err(err) = PpOcr::load(&dir.path().join("missing.onnx"), &dict, 4) else { panic!("no other line may hold two") };
+        assert!(matches!(&err, OcrError::Load(_, m) if m.contains("one character")), "{err:?}");
+    }
+
+    /// The score ignores the blank steps between letters and averages the rest.
+    #[test]
+    fn the_score_is_the_mean_of_the_letters() {
+        let rows = [0.9, 0.1, 0.0, 0.2, 0.8, 0.0, 0.1, 0.0, 0.9];
+        assert!((score(&rows, 3) - 0.85).abs() < 1e-6);
+        assert_eq!(score(&[1.0, 0.0, 0.0], 3), 0.0, "all blank is no reading at all");
     }
 
     #[test]

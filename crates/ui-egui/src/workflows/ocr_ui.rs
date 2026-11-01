@@ -34,7 +34,9 @@ pub struct OcrDraft {
 
 impl Default for OcrDraft {
     fn default() -> Self {
-        OcrDraft { pages: OcrPages::All, from: 1, to: 1, language: "en".into(), dpi: 300, text_pages: false }
+        // This edition's readers mostly scan Thai, and the Thai model reads English too.
+        let language = if pdfcraft_engine::ocr::available_for("th") { "th" } else { "en" };
+        OcrDraft { pages: OcrPages::All, from: 1, to: 1, language: language.into(), dpi: 300, text_pages: false }
     }
 }
 
@@ -203,7 +205,7 @@ impl PdfCraftApp {
     /// is one undoable step, "Recognize text", and is not run again for that page after Undo.
     pub(crate) fn auto_ocr_scanned_page(&mut self) {
         let Some(scan) = self.scan_to_read() else { return };
-        if !pdfcraft_engine::ocr::available() {
+        if !pdfcraft_engine::ocr::available_for(&self.ocr_draft.language) {
             self.views[scan.view].auto_ocr_skipped.insert(scan.page, scan.generation);
             return;
         }

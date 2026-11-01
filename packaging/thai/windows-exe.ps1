@@ -4,10 +4,9 @@
 
 .DESCRIPTION
   The exe is self-contained (static CRT, no Visual C++ redistributable) and keeps its settings in
-  %APPDATA%\PdfCraft like any installed app. Two things are left out on purpose:
-    - the OCR models. Without a models\ folder beside the exe the built-in Latin OCR is unavailable;
-      everything else works.
-    - an MSI. The WiX files name ArtCraft, and this edition may not carry that name.
+  %APPDATA%\PdfCraft like any installed app. The English and Thai OCR models are compiled in, and
+  are written to %LOCALAPPDATA%\PdfCraft\models the first time they are needed. There is no MSI:
+  the WiX files name ArtCraft, and this edition may not carry that name.
   The licence texts that must accompany a copy go in a separate text file next to the exe.
   Output in dist\release: pdfcraft-<version>-thai-windows-x64.exe and ...-licences.txt
 #>
@@ -38,6 +37,17 @@ if (-not $env:PDFCRAFT_BUILD_SHA) { $env:PDFCRAFT_BUILD_SHA = (git -C $Root rev-
 if (-not $env:PDFCRAFT_BUILD_DATE) { $env:PDFCRAFT_BUILD_DATE = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd') }
 Write-Output "PdfCraft TH $Version for Windows x64"
 
+Push-Location $Root
+try {
+  # The models go inside the exe; the build reads them from this folder.
+  $Models = Join-Path $Root 'target\thai-package\models'
+  New-Item -ItemType Directory -Force -Path $Models | Out-Null
+  Invoke-Native 'cargo xtask models' { cargo xtask models $Models }
+  $env:PDFCRAFT_EMBED_MODELS = $Models
+} finally {
+  Pop-Location
+}
+
 # Static CRT; the icon and version info must embed or the build fails.
 [Environment]::SetEnvironmentVariable('CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS', '-C target-feature=+crt-static')
 $env:PDFCRAFT_REQUIRE_WINRES = '1'
@@ -56,7 +66,7 @@ try {
   # Licence texts that go with a copy of the program, in one file.
   $Notes = Join-Path $Dist "pdfcraft-$Name-windows-x64-licences.txt"
   Remove-Item -Force $Notes -ErrorAction SilentlyContinue
-  foreach ($f in 'LICENSE-MIT', 'LICENSE-APACHE', 'NOTICE', 'assets\app-icon\LICENSE-document.txt') {
+  foreach ($f in 'LICENSE-MIT', 'LICENSE-APACHE', 'NOTICE', 'assets\app-icon\LICENSE-document.txt', 'target\thai-package\models\ATTRIBUTION.txt', 'target\thai-package\models\text-detection.onnx.LICENCE.txt') {
     $p = Join-Path $Root $f
     if (Test-Path $p) {
       Add-Content -Path $Notes -Encoding utf8 -Value ("=" * 78)

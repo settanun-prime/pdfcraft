@@ -1,7 +1,7 @@
 # Local text recognition
 
 Scan & OCR → Recognize text offers **English** (`en`), **Chinese (Simplified) and English**
-(`zh`), **Latin (accented)** (`la`), and the individual languages French, German, Spanish,
+(`zh`), **Thai and English** (`th`, this edition's default when its model is installed), **Latin (accented)** (`la`), and the individual languages French, German, Spanish,
 Portuguese, Italian, Dutch, Danish, Norwegian, Swedish, Icelandic, Finnish, Czech and Polish.
 The Chinese recogniser reads Chinese, Latin letters and numbers in the same line. `la` and
 those named languages share the Latin recogniser. A named language prefers its own letters
@@ -27,7 +27,7 @@ This downloads the models and licence notices into `assets/models/`, verifies th
 SHA-256 hashes, and leaves them outside Git. English needs `text-detection.rten` and
 `text-recognition.rten`; Chinese needs `text-detection.rten`, `chinese-recognition.onnx`
 and `chinese-keys.txt`; Latin needs `text-detection.rten`, `latin-recognition.onnx`
-and `latin-keys.txt`. Sources, versions, hashes and licences are in
+and `latin-keys.txt`; Thai needs `text-detection.onnx`, `thai-recognition.onnx` and `thai-keys.txt`. Sources, versions, hashes and licences are in
 [ATTRIBUTION.toml](../ATTRIBUTION.toml).
 
 For an installed desktop app, put those files in a directory and launch with
@@ -38,8 +38,8 @@ checked separately for each language; installing English alone does not enable C
 or Latin. Desktop release packages include the models. The Linux CLI-only archive does not.
 
 Recognition runs entirely on the CPU in Rust, using RTen. English uses ocrs;
-Chinese uses the Apache-2.0 PP-OCRv4 mobile recognition model and Latin the PP-OCRv5
-Latin one, both converted to ONNX by RapidAI, with PaddleOCR's character dictionaries and
+Chinese uses the Apache-2.0 PP-OCRv4 mobile recognition model, Latin the PP-OCRv5
+Latin one and Thai the PP-OCRv5 Thai one, all converted to ONNX by RapidAI, with PaddleOCR's character dictionaries and
 the existing ocrs detector. Only model installation needs network access. Recognition
 never uploads a PDF or calls a cloud service.
 

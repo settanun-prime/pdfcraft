@@ -3309,6 +3309,32 @@ usage = "Offline Chinese and mixed English Scan & OCR (cargo xtask models)"
 sha256 = "28b2362ad4ab2dc38769aa72feb535e3a9ddb3fd2a7585a05920e6393b1dc7f7"
 
 [[fetched]]
+file = "thai-recognition.onnx"
+url = "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/rec/th_PP-OCRv5_rec_mobile.onnx"
+title = "PP-OCRv5 mobile Thai recognition model (ONNX)"
+author = "PaddlePaddle Authors; RapidAI contributors (ONNX conversion)"
+source = "https://github.com/RapidAI/RapidOCR/tree/v3.9.2; PaddleOCR PP-OCRv5 Thai recognition model, converted to ONNX by RapidAI"
+licence = "Apache-2.0"
+licence_url = "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/v3.2.0/LICENSE"
+licence_sha256 = "3840c5c0c61c294264d2dd77b8777be6ddd90121ef4e0e64abcd22edea581d6e"
+kind = "model"
+usage = "Scan & OCR: Thai with English and digits (cargo xtask models)"
+sha256 = "de541dd83161c241ff426f7ecfd602a0ba77d686cf3ab9a6c255ea82fd08006e"
+
+[[fetched]]
+file = "thai-keys.txt"
+url = "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/v3.2.0/ppocr/utils/dict/ppocrv5_th_dict.txt"
+title = "PaddleOCR PP-OCRv5 Thai character dictionary"
+author = "PaddlePaddle Authors"
+source = "https://github.com/PaddlePaddle/PaddleOCR/blob/v3.2.0/ppocr/utils/dict/ppocrv5_th_dict.txt"
+licence = "Apache-2.0"
+licence_url = "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/v3.2.0/LICENSE"
+licence_sha256 = "3840c5c0c61c294264d2dd77b8777be6ddd90121ef4e0e64abcd22edea581d6e"
+kind = "model"
+usage = "Scan & OCR: character classes for the Thai recogniser (cargo xtask models)"
+sha256 = "beef8bb05d9803325a14d49f3bbe1bf00dbf2617730685b377f7a2e3f4428c0b"
+
+[[fetched]]
 file = "latin-recognition.onnx"
 url = "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/rec/latin_PP-OCRv5_rec_mobile.onnx"
 title = "PP-OCRv5 mobile Latin recognition model (ONNX)"

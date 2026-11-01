@@ -33,6 +33,9 @@ ATTR = "ATTRIBUTION.toml"
 CREDITS = "packaging/macos/Credits.rtf"
 WORKFLOW = ".github/workflows/thai-build.yml"
 NOTES = "packaging/thai/release-notes.md"
+OCR = "crates/ocr/src/lib.rs"
+OCR_LAYER = "crates/engine/src/ocr/layer.rs"
+OCR_UI = "crates/ui-egui/src/workflows/ocr_ui.rs"
 
 # Promotions: none of these may be on the home screen or in the title bar.
 PROMOTION = re.compile(r"discord|community|sponsor|donat|join (the|our)|newsletter", re.IGNORECASE)
@@ -77,6 +80,11 @@ PRESENT = [
     (WORKFLOW, "runs-on: macos-latest", "the Thai build workflow is gone or no longer uses the free macOS runner"),
     (WORKFLOW, "--draft", "the Thai build would publish a release without a draft stage"),
     (NOTES, "unofficial Thai edition", "the release notes no longer say this is an unofficial edition"),
+    (OCR, '("th", "Thai and English")', "Thai is gone from the OCR languages"),
+    (OCR, "THAI_MIN_SCORE", "Thai OCR no longer filters out artwork read as letters"),
+    (OCR_LAYER, "fn invisible_font", "the OCR text layer is no longer the Type 0 font Apple's PDF reader can see"),
+    (OCR_UI, 'available_for("th")', "the OCR dialog no longer opens on Thai"),
+    (ATTR, 'file = "thai-recognition.onnx"', "the Thai OCR model is no longer fetched"),
 ]
 
 
