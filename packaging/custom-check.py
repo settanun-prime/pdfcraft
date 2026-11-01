@@ -72,7 +72,7 @@ PRESENT = [
     (EDIT, "pdfcraft_fonts::source_shaping::shape(face.bytes, text)", "shape_source no longer falls back to a Thai face"),
     (VIEWER, "names_thai_family", "PDFs that don't embed a Thai font no longer use an installed one"),
     (VIEWER, '&["Supplemental/SukhumvitSet.ttc", "Supplemental/Sathu.ttf"', "Sukhumvit Set no longer comes first in the viewer; tone marks disappear without it"),
-    (ICON, 'id="thai-badge"', "the app icon has no TH badge"),
+    (ICON, 'id="thai-logo"', "the app icon is not the Thai logo (the upstream lion is back?)"),
     (CREDITS, "unofficial Thai edition", "the macOS About panel no longer says this is an unofficial edition"),
     (WORKFLOW, "runs-on: macos-latest", "the Thai build workflow is gone or no longer uses the free macOS runner"),
     (WORKFLOW, "--draft", "the Thai build would publish a release without a draft stage"),

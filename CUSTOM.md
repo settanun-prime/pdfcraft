@@ -24,7 +24,7 @@ Branch `custom/thai-no-ads` เพิ่มสี่เรื่องจาก�
 | เรื่อง | กติกา | สิ่งที่เราทำ |
 |---|---|---|
 | โค้ด | MIT OR Apache-2.0 แก้ได้ แจกต่อได้ ต้องเก็บประกาศลิขสิทธิ์ไว้ | ไม่แตะ `LICENSE-MIT`, `LICENSE-APACHE`, `NOTICE` รายการสิ่งที่แก้อยู่ในไฟล์นี้ |
-| ไอคอนสิงโต | MIT OR Apache-2.0 (`assets/app-icon/LICENSE.txt`) แก้ได้ | ติดป้าย TH ด้วย `packaging/thai-badge.py` ป้ายวาดเองจากสี่เหลี่ยม ไม่ใช้ font |
+| ไอคอนของเรา (หน้ากระดาษ ตัว ก และป้าย PDF) | งานต้นฉบับของฉบับนี้ MIT OR Apache-2.0 (`assets/app-icon/LICENSE.txt`) รูปร่างตัว ก, P, D, F ลากจาก Sarabun Bold (SIL OFL 1.1) | สร้างด้วย `packaging/thai/make-logo.py` ไม่มีโลโก้หรือสิงโตของต้นทาง |
 | ชื่อและโลโก้ ArtCraft | เป็นเครื่องหมายการค้า ไม่ใช่โอเพนซอร์ส ถ้าเผยแพร่เวอร์ชันที่แก้ไขต้องเอาออก (`docs/brand/LICENSE-brand.txt`, `AGENTS.md`, `README.md`, `NOTICE` ของต้นทางเขียนตรงกัน) | เอาโลโก้ รูปที่มีโลโก้ ปุ่ม เมนู และหน้า About ออกหมด README เป็นของเราเอง |
 | คำที่ยังบอกได้ | บอกเป็นข้อความธรรมดาได้ว่า "based on PdfCraft by the ArtCraft team" | หน้า About และ README บอกไว้ และบอกด้วยว่าไม่ใช่ของทางการ ห้ามเขียนว่าทีมนั้นรับรองหรือสนับสนุน |
 | font ตอนแสดงบนจอ | อ่าน font ที่ติดตั้งในเครื่องมาวาดบนจอเป็นเรื่องปกติ ไม่คัดลอก ไม่แจก | ใช้ Sukhumvit Set, Sathu, Tahoma แสดงบนจอเท่านั้น |
@@ -128,6 +128,7 @@ git push origin custom/thai-no-ads
 | `docs/brand/` (ยกเว้น `LICENSE-brand.txt`), `docs/images/pdfcraft-tools.png` | ลบโลโก้และภาพที่มีโลโก้ติดอยู่ แต่เก็บ `LICENSE-brand.txt` ไว้ไฟล์เดียว เพราะด่าน `cargo xtask license-check` ของต้นทางบังคับให้มี (ดู `LICENSES.toml`) | ถ้าต้นทางแก้หรือเพิ่มไฟล์ใน `docs/brand/` ให้รับ `LICENSE-brand.txt` ฉบับใหม่ของต้นทาง ที่เหลือลบต่อด้วย `git rm` |
 | `ATTRIBUTION.toml`, `ATTRIBUTION.md` | ลบรายการของ `docs/brand/*` และ `pdfcraft-tools.png` และ hash ของไอคอนที่ติดป้าย TH | รวมรายการใหม่ของต้นทางเข้ามา ห้ามเอารายการ `docs/brand/*` กลับมา แล้วรัน `cargo xtask assets --write` |
 | `packaging/macos/Credits.rtf` | ข้อความเป็นของเรา ไม่มีลิงก์ Discord หรือเว็บ ArtCraft และบอกว่าเป็นฉบับไม่เป็นทางการ | เอาของเรา ถ้าต้นทางแก้ไฟล์นี้ให้ดูว่าเพิ่มลิงก์โปรโมทไหม แล้วรับเฉพาะส่วนที่ไม่ใช่โปรโมท |
+| `LICENSES.toml` | hash ของ `assets/app-icon/LICENSE.txt` เปลี่ยนเป็นของข้อความใบอนุญาตไอคอนใหม่ของเรา (ด่าน `license-check` บังคับให้ hash ตรง) | ถ้าโดน conflict ให้รับของต้นทางทั้งไฟล์ แล้วแก้บรรทัด `sha256` ของรายการ `assets/app-icon/LICENSE.txt` เป็นค่าจาก `shasum -a 256 assets/app-icon/LICENSE.txt` |
 | `.github/workflows/thai-build.yml`, `packaging/thai/` | ไฟล์ของเราเอง ต้นทางไม่มี จึงไม่ชน | เก็บไว้ทั้งหมด |
 
 test ที่เราแก้ตามไปด้วย: `crates/edit/src/tests.rs`, `crates/engine/src/links/tests.rs` และ `crates/ui-egui/tests/it/` (`content.rs`, `editing.rs`, `fonts.rs`, `links.rs`, `ui.rs`)
@@ -136,14 +137,14 @@ test ที่เราแก้ตามไปด้วย: `crates/edit/src/te
 
 ถ้าต้นทางเพิ่มการ์ดหรือปุ่มโปรโมทใหม่ git จะไม่เอาออกให้ ต้องลบเองแล้วเพิ่มลงตารางนี้
 
-ถ้าไฟล์ใน `assets/app-icon/` โดน conflict หรือต้นทางเปลี่ยนไอคอน ให้เอาของต้นทางมา แล้วติดป้าย TH ใหม่ (สคริปต์อัปเดต hash ใน `ATTRIBUTION.toml` ให้เอง):
+ถ้าไฟล์ใน `assets/app-icon/` โดน conflict หรือต้นทางเปลี่ยนไอคอน ให้เอาของเรา (ไอคอนเป็นของเราเองแล้ว) จะได้ไม่ต้องตามต้นทาง ถ้าไฟล์ไอคอนเสียหรืออยากวาดใหม่ ให้รันสคริปต์ มันเขียนไฟล์ไอคอนทุกขนาดและอัปเดต hash ใน `ATTRIBUTION.toml` ให้เอง:
 
 ```bash
-git checkout main -- assets/app-icon
+git checkout --ours assets/app-icon
 ```
 
 ```bash
-python3 packaging/thai-badge.py
+python3 packaging/thai/make-logo.py
 ```
 
 ```bash
@@ -171,7 +172,7 @@ cargo xtask assets --write
 
 1. โลโก้ใหม่ต้องเป็นงานที่เราสร้างเอง หรือมีใบอนุญาตเปิดที่ใช้แก้ไขและแจกต่อได้ ห้ามเลียนเครื่องหมายของคนอื่น และห้ามมีชื่อหรือรูป ArtCraft
 2. ใส่รายการใน `ATTRIBUTION.toml` (ผู้สร้าง ใบอนุญาต ไฟล์ใบอนุญาต `sha256`) แล้วรัน `cargo xtask assets --write` มิฉะนั้นด่านตรวจใน CI ล้ม
-3. ไอคอนสิงโตเดิมเป็นงานของโครงการเองภายใต้ MIT OR Apache-2.0 (`assets/app-icon/LICENSE.txt`) แก้หรือเปลี่ยนได้ ถ้าเปลี่ยนทั้งชุด `packaging/thai-badge.py` ก็ไม่ต้องใช้แล้ว และ `custom-check.py` ข้อที่ตรวจป้าย TH ต้องปรับตาม
+3. ไอคอนสิงโตเดิมของต้นทางเป็นงานของโครงการเองภายใต้ MIT OR Apache-2.0 เราเปลี่ยนเป็นไอคอนของเราแล้ว (หน้ากระดาษ ตัว ก และป้าย PDF วาดโดย `packaging/thai/make-logo.py`) ถ้าจะวาดใหม่อีก ให้แก้ตัวสคริปต์หรือ `packaging/thai/logo-glyphs.json` แล้วรันซ้ำ
 4. ไฟล์ใน `assets/app-icon/` จะโดน conflict ทุกครั้งที่ต้นทางเปลี่ยนไอคอน ให้เก็บของเรา
 
 

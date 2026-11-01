@@ -1,12 +1,17 @@
-PdfCraft app icon (pdfcraft.svg, pdfcraft-small.svg and every file derived from them in this
+PdfCraft TH app icon (pdfcraft.svg, pdfcraft-small.svg and every file derived from them in this
 directory: pdfcraft-1024.png, pdfcraft.icns, pdfcraft.ico, hicolor/).
 
-Original artwork made for this project by the project owner, drawn in ArtCraft and vectorised for
-PdfCraft (no third-party material). Licensed like the rest of PdfCraft, under either of
+Original artwork made for PdfCraft TH, an unofficial Thai edition of PdfCraft, by the owner of
+this fork with the help of Claude (Anthropic). It replaces the upstream app icon in this edition.
+The outlines of the letters ก, P, D and F are traced from Sarabun Bold (SIL Open Font License 1.1,
+Copyright The Sarabun Project Authors); that licence does not restrict artwork made with a font.
+No ArtCraft mark is used.
+
+To the extent it is protected by copyright, licensed under either of
 
   * Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
   * MIT license (https://opensource.org/licenses/MIT)
 
 at your option.
 
-Regenerate the derived files with packaging/icons.sh.
+Regenerate the derived files with packaging/thai/make-logo.py.
