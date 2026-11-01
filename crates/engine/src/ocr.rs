@@ -15,7 +15,7 @@ use pdfcraft_render::{PageInfo, PageRenderer, RenderConfig, RenderRequest, Reque
 
 pub use pdfcraft_ocr::{LANGUAGES, Models, Ocr, OcrError, PlacedWord};
 
-use crate::{DocId, Edit, EditError, Session};
+use crate::{DocId, Document, Edit, EditError, Session};
 
 /// Recognize Text settings.
 #[derive(Clone, Debug, PartialEq)]
@@ -34,6 +34,20 @@ pub struct OcrSettings {
     /// that is read, so a scan with a few comments on it is still a scan. `false`: everything
     /// the page shows.
     pub native_text_only: bool,
+    /// With `skip_text_pages` on, still read a page where a picture covers at least half of it
+    /// ([`page_is_picture`]): a certificate with typed names over a picture of its Thai wording
+    /// has text, and the rest of it is only in the picture.
+    pub read_pictures: bool,
+}
+
+/// Whether an image covers at least half of `page`.
+pub fn page_is_picture(doc: &Document, page: usize) -> bool {
+    let Some(info) = doc.info.pages.get(page) else { return false };
+    let area = f64::from(info.width) * f64::from(info.height);
+    doc.page_images(page).iter().any(|i| {
+        let [x0, y0, x1, y1] = i.visible_rect.unwrap_or(i.rect);
+        area > 0.0 && ((x1 - x0) * (y1 - y0)).abs() >= 0.5 * area
+    })
 }
 
 /// A recognised word whose box is at least this much covered by the page's own text is that
@@ -61,7 +75,7 @@ fn covered(word: [f32; 4], text: &[[f32; 4]]) -> f32 {
 
 impl Default for OcrSettings {
     fn default() -> Self {
-        OcrSettings { dpi: 300.0, language: "en".into(), skip_text_pages: true, native_text_only: false }
+        OcrSettings { dpi: 300.0, language: "en".into(), skip_text_pages: true, native_text_only: false, read_pictures: false }
     }
 }
 
@@ -117,6 +131,8 @@ pub struct OcrJob {
     /// Per page: the render scale (pixels per point) that shows its images at their own
     /// resolution, if it has any.
     native: Vec<Option<f32>>,
+    /// Per page: [`page_is_picture`], for the pages to read.
+    pictures: Vec<bool>,
     pub pages: Vec<usize>,
     pub settings: OcrSettings,
 }
@@ -142,7 +158,8 @@ impl OcrJob {
                 .text
                 .map(|t| t.glyphs.iter().filter(|g| !g.text.trim().is_empty()).map(|g| g.rect).collect())
                 .unwrap_or_default();
-            if self.settings.skip_text_pages && !existing.is_empty() {
+            let picture = self.settings.read_pictures && self.pictures.get(page).copied().unwrap_or(false);
+            if self.settings.skip_text_pages && !existing.is_empty() && !picture {
                 out.push(skip("the page already contains text"));
                 continue;
             }
@@ -208,7 +225,8 @@ impl Session {
                     .reduce(f32::max)
             })
             .collect();
-        Some(OcrJob { bytes: doc.bytes.clone(), password: doc.password.clone(), infos: doc.info.pages.clone(), native, pages, settings })
+        let pictures = (0..all).map(|p| pages.contains(&p) && page_is_picture(doc, p)).collect();
+        Some(OcrJob { bytes: doc.bytes.clone(), password: doc.password.clone(), infos: doc.info.pages.clone(), native, pictures, pages, settings })
     }
 
     /// Add the words found by [`OcrJob::run`] as one undoable step. Returns the number of words.

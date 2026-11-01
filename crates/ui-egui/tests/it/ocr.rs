@@ -475,10 +475,14 @@ fn editing_a_scan_with_a_comment_over_it_recognizes_the_picture() {
     assert_eq!(h.state().session.get(id).unwrap().can_undo(), Some("Recognize text"));
 }
 
-/// A born-digital page with a full-page background picture and real text (a flyer, a slide
-/// export) must not change just because Edit is turned on (maintainer review of #1609).
+/// A page with real text over a full-page picture (a certificate with typed names): Edit reads
+/// the picture, and the page's own text is not added again.
 #[test]
-fn editing_a_page_with_text_over_a_background_picture_changes_nothing() {
+fn editing_a_page_with_text_over_a_picture_reads_the_picture() {
+    if !pdfcraft_engine::ocr::available() {
+        eprintln!("skipped: OCR models not installed");
+        return;
+    }
     let hybrid = {
         let mut s = Session::new();
         let id = s.open("scan.pdf", None, std::sync::Arc::new(scan()), None).unwrap();
@@ -496,11 +500,22 @@ fn editing_a_page_with_text_over_a_background_picture_changes_nothing() {
     assert!(h.state_mut().execute("edit.edit_text"));
     h.run_steps(6);
     assert!(h.state().ocr_run.is_none());
+    assert_eq!(h.state().session.get(id).unwrap().can_undo(), Some("Recognize text"));
+    let text = export::Exporter::new(h.state().session.get(id).unwrap()).text_of(&[0]).unwrap().to_lowercase();
+    assert_eq!(text.matches("invoice").count(), 1, "{text}");
+}
+
+/// A page of real text with no picture is not read when Edit is turned on.
+#[test]
+fn editing_a_page_with_no_picture_changes_nothing() {
+    let text = Session::new().create_from_text("t", "Plain words on a page.").unwrap().to_vec();
+    let mut h = edit_harness(text);
+    let id = h.state().active_ids().unwrap().1;
+    assert!(h.state_mut().execute("edit.edit_text"));
+    h.run_steps(6);
+    assert!(h.state().ocr_run.is_none());
     assert_eq!(h.state().session.get(id).unwrap().can_undo(), None, "nothing was recognized or marked modified");
     assert!(!h.state().session.get(id).unwrap().dirty, "the file is not marked modified");
-    // And Edit says nothing about recognizing: no progress, no "0 words ... already had text".
-    let toast = h.state().toast.as_ref().map(|t| t.0.clone()).unwrap_or_default();
-    assert!(!toast.contains("ecogniz") && !toast.contains("already had text"), "{toast:?}");
 }
 
 /// A page that is not a scan when Edit looks at it is looked at again after the document changes:

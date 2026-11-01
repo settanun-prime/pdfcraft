@@ -13,7 +13,8 @@ files. The interface language and OCR document language are independent.
 
 The output is a searchable image: original page images and content stay intact, with an
 invisible text layer for selection, copying, search and text export. Recognition is one
-undoable step. By default, pages that already contain text are skipped.
+undoable step. By default, pages that already contain text are skipped, unless a picture covers
+at least half of the page: then only the words that are not already on the page are added.
 
 ## Install the models
 

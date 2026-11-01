@@ -43,7 +43,13 @@ impl Default for OcrDraft {
 impl OcrDraft {
     /// The recognition settings these choices make.
     pub fn settings(&self) -> OcrSettings {
-        OcrSettings { dpi: self.dpi as f32, language: self.language.clone(), skip_text_pages: !self.text_pages, ..Default::default() }
+        OcrSettings {
+            dpi: self.dpi as f32,
+            language: self.language.clone(),
+            skip_text_pages: !self.text_pages,
+            read_pictures: true,
+            ..Default::default()
+        }
     }
 }
 
@@ -199,10 +205,11 @@ impl PdfCraftApp {
     /// Images", the page's words are recognized first, so that they open for editing (Edit text &
     /// images groups the recognised words into phrases). Runs once per page, for the page in view
     /// while Edit is on (its tab, or the Edit text & images or Add text tool). The page must be a
-    /// picture (an image covering at least half of it) with no text of its own: comments and text
-    /// boxes over it do not count as text, but real page text does, and such a page (a flyer with a
-    /// background picture) is left alone, and is judged again only when the document changes. It
-    /// is one undoable step, "Recognize text", and is not run again for that page after Undo.
+    /// picture (an image covering at least half of it), and real text on it does not stop that: a
+    /// certificate with typed names keeps its Thai wording in the picture, and only the words that
+    /// are not already on the page are added. Other pages are judged again only when the document
+    /// changes. It is one undoable step, "Recognize text", and is not run again for that page
+    /// after Undo.
     pub(crate) fn auto_ocr_scanned_page(&mut self) {
         let Some(scan) = self.scan_to_read() else { return };
         if !pdfcraft_engine::ocr::available_for(&self.ocr_draft.language) {
@@ -210,12 +217,12 @@ impl PdfCraftApp {
             return;
         }
         self.views[scan.view].auto_ocr_tried.insert(scan.page);
-        // Only a page with no text of its own is read. Comments and text boxes over the picture do
-        // not count as its text (a scan with a few comments is still a scan, as in Acrobat), but
-        // a page with real text and a background picture is left alone.
+        // Comments and text boxes over the picture are not read into the layer (a scan with a few
+        // comments is still a scan, as in Acrobat).
         let mut settings = self.ocr_draft.settings();
         settings.skip_text_pages = true;
         settings.native_text_only = true;
+        settings.read_pictures = true;
         self.start_ocr_pages(scan.doc, &[scan.page], settings, true);
     }
 
@@ -250,13 +257,7 @@ impl PdfCraftApp {
         if self.views[view].auto_ocr_skipped.get(&page) == Some(&generation) {
             return None;
         }
-        let info = document.info.pages.get(page)?;
-        let page_area = f64::from(info.width) * f64::from(info.height);
-        let covered = document.page_images(page).iter().any(|i| {
-            let [x0, y0, x1, y1] = i.visible_rect.unwrap_or(i.rect);
-            page_area > 0.0 && ((x1 - x0) * (y1 - y0)).abs() >= 0.5 * page_area
-        });
-        if !covered {
+        if !pdfcraft_engine::ocr::page_is_picture(document, page) {
             self.views[view].auto_ocr_skipped.insert(page, generation);
             return None;
         }

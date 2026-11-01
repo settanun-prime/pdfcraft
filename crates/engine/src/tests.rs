@@ -5163,7 +5163,38 @@ fn recognize_text_reads_a_picture_on_a_page_that_has_text() {
     assert_eq!((count(&s, "invoice"), count(&s, "brown")), (1, 1));
 }
 
-/// Edit reads a scan that only has comments on it, not a page with real text and a picture
+/// `read_pictures`: a picture of text on a page with its own text is read while
+/// `skip_text_pages` stays on, and a page of text with no picture is still skipped.
+#[test]
+fn read_pictures_reads_a_page_that_is_a_picture_and_has_text() {
+    if !ocr::available() {
+        eprintln!("skipped: OCR models not installed");
+        return;
+    }
+    let mut s = Session::new().with_clock(|| 1_700_000_000);
+    let text = s.create_from_text("t", "The quick brown fox jumps over the lazy dog.").unwrap();
+    let plain = s.open("text.pdf", None, text, None).unwrap();
+    let png = export::Exporter::new(s.get(plain).unwrap()).png(0, 150.0).unwrap();
+    let scan = s.create_from_images(&[("scan.png".into(), png)]).unwrap();
+    let id = s.open("scan.pdf", None, scan, None).unwrap();
+    let (w, h) = {
+        let p = &s.get(id).unwrap().info.pages[0];
+        (p.width as f64, p.height as f64)
+    };
+    let note = AddedText { rect: [w * 0.1, h * 0.75, w * 0.9, h * 0.85], text: "Invoice reference 4711".into(), size: 18.0, ..Default::default() };
+    s.apply(id, Edit::AddText { page: 0, text: note }).unwrap();
+
+    let settings = ocr::OcrSettings { read_pictures: true, ..Default::default() };
+    let skipped = s.recognize_text(plain, &[], settings.clone()).unwrap();
+    assert!(skipped[0].skipped.is_some(), "no picture on this page");
+    let found = s.recognize_text(id, &[], settings).unwrap();
+    assert_eq!(found[0].skipped, None);
+    let added = found[0].text().to_lowercase();
+    assert!(added.contains("brown") && !added.contains("invoice"), "{added}");
+}
+
+/// Edit reads a scan that only has comments on it, not a page with real text and a picture,
+/// unless `read_pictures` is on
 /// (`native_text_only`): a text box over the picture is not the page's text, page content is.
 #[test]
 fn native_text_only_ignores_comments_but_not_page_text() {
