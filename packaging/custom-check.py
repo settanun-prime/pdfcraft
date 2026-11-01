@@ -32,6 +32,7 @@ README = "README.md"
 ATTR = "ATTRIBUTION.toml"
 CREDITS = "packaging/macos/Credits.rtf"
 WORKFLOW = ".github/workflows/thai-build.yml"
+NOTES = "packaging/thai/release-notes.md"
 
 # Promotions: none of these may be on the home screen or in the title bar.
 PROMOTION = re.compile(r"discord|community|sponsor|donat|join (the|our)|newsletter", re.IGNORECASE)
@@ -54,6 +55,8 @@ ABSENT = [
     (CREDITS, "discord", "the macOS About panel links to Discord again"),
     (CREDITS, "getartcraft.com", "the macOS About panel links to the ArtCraft site again"),
     (WORKFLOW, "xlarge", "the Thai build uses a paid macOS runner; keep the free macos-latest"),
+    (NOTES, "discord", "the release notes promote the community again"),
+    (NOTES, "getartcraft", "the release notes link to the ArtCraft site again"),
 ]
 
 PRESENT = [
@@ -72,6 +75,8 @@ PRESENT = [
     (ICON, 'id="thai-badge"', "the app icon has no TH badge"),
     (CREDITS, "unofficial Thai edition", "the macOS About panel no longer says this is an unofficial edition"),
     (WORKFLOW, "runs-on: macos-latest", "the Thai build workflow is gone or no longer uses the free macOS runner"),
+    (WORKFLOW, "--draft", "the Thai build would publish a release without a draft stage"),
+    (NOTES, "unofficial Thai edition", "the release notes no longer say this is an unofficial edition"),
 ]
 
 

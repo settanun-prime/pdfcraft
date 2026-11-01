@@ -3,10 +3,14 @@ name: Thai build
 # Our own build of the Thai edition on GitHub's free runners. This repository is public, so the
 # minutes are not charged. It stands in for upstream's release.yml, which needs Apple and Azure
 # signing secrets and a paid large macOS runner. Nothing here is signed or notarized;
-# artifacts are kept for 7 days. Start it by pushing a tag named thai-v<version>-<n>, for example
-# `git tag thai-v0.16.1-1 && git push origin thai-v0.16.1-1`. A tag run reads this file from the
-# tagged commit, so it works from the custom branch; the Run workflow button only lists files on
-# the default branch, which stays a clean mirror of upstream.
+# artifacts are kept for 7 days. Start it by pushing a tag named thai-v<upstream version>-<n>, for
+# example `git tag thai-v0.16.1-1 && git push origin thai-v0.16.1-1`. A tag run reads this file
+# from the tagged commit, so it works from the custom branch; the Run workflow button only lists
+# files on the default branch, which stays a clean mirror of upstream.
+#
+# The number after the last dash is this edition's own release counter: it becomes the build label
+# `th.<n>` (shown by --version and in About, and in the file names). A tag run also drafts a GitHub
+# release with the files attached. It is only a draft: nothing is public until someone publishes it.
 
 on:
   push:
@@ -22,8 +26,6 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  # Compiled into `--version` and About, so this build can't be mistaken for upstream's release.
-  PDFCRAFT_BUILD_LABEL: thai
 
 jobs:
   macos:
@@ -33,8 +35,19 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Label this build
+        shell: bash
+        run: |
+          n="${GITHUB_REF_NAME##*-}"
+          case "$n" in ''|*[!0-9]*) label=th ;; *) label="th.$n" ;; esac
+          echo "PDFCRAFT_BUILD_LABEL=$label" >> "$GITHUB_ENV"
       - name: Build, ad-hoc sign, package
         run: packaging/macos/package.sh --arch aarch64
+      - name: Put the label in the DMG name
+        run: |
+          for f in dist/release/pdfcraft-*-macos-aarch64.dmg; do
+            mv "$f" "${f%-macos-aarch64.dmg}-${PDFCRAFT_BUILD_LABEL}-macos-aarch64.dmg"
+          done
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pdfcraft-th-macos-aarch64
@@ -48,6 +61,12 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Label this build
+        shell: bash
+        run: |
+          n="${GITHUB_REF_NAME##*-}"
+          case "$n" in ''|*[!0-9]*) label=th ;; *) label="th.$n" ;; esac
+          echo "PDFCRAFT_BUILD_LABEL=$label" >> "$GITHUB_ENV"
       - name: Build and pack
         shell: pwsh
         run: ./packaging/thai/windows-exe.ps1
@@ -57,3 +76,25 @@ jobs:
           path: dist/release/*
           retention-days: 7
           if-no-files-found: error
+
+  release:
+    name: Draft release
+    needs: [macos, windows]
+    if: startsWith(github.ref, 'refs/tags/thai-v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Draft the release (a draft and a prerelease, never published from here)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          v="${TAG#thai-v}"
+          title="PdfCraft TH ${v%-*} (th.${v##*-})"
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --dir files
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft --prerelease \
+            --title "$title" --notes-file packaging/thai/release-notes.md files/*/*

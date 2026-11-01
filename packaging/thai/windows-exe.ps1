@@ -48,11 +48,13 @@ try {
   $Bin = Join-Path $Root "target\$Target\release"
   Invoke-Native 'pdfcraft-cli --version' { & (Join-Path $Bin 'pdfcraft-cli.exe') --version }
 
-  $Exe = Join-Path $Dist "pdfcraft-$Version-thai-windows-x64.exe"
+  # The build label (th.<n>, set by the workflow from the tag) goes into the file names.
+  $Name = if ($env:PDFCRAFT_BUILD_LABEL) { "$Version-$($env:PDFCRAFT_BUILD_LABEL)" } else { "$Version-thai" }
+  $Exe = Join-Path $Dist "pdfcraft-$Name-windows-x64.exe"
   Copy-Item -Force (Join-Path $Bin 'pdfcraft.exe') $Exe
 
   # Licence texts that go with a copy of the program, in one file.
-  $Notes = Join-Path $Dist "pdfcraft-$Version-thai-windows-x64-licences.txt"
+  $Notes = Join-Path $Dist "pdfcraft-$Name-windows-x64-licences.txt"
   Remove-Item -Force $Notes -ErrorAction SilentlyContinue
   foreach ($f in 'LICENSE-MIT', 'LICENSE-APACHE', 'NOTICE', 'assets\app-icon\LICENSE-document.txt') {
     $p = Join-Path $Root $f
