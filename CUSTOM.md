@@ -106,7 +106,7 @@ git push origin custom/thai-no-ads
 | `crates/engine/src/links.rs`, `crates/engine/src/commands.rs`, `crates/ui-egui/src/menus.rs` | ลบรายการ `help.discord`, `help.website` และค่า `DISCORD`, `WEBSITE` | ลบต่อไป ถ้าต้นทางเพิ่มลิงก์ชุมชนใหม่ให้ลบด้วย |
 | `apps/pdfcraft-cli/src/main.rs` | ลบบรรทัด Discord ใน help และ `--version` | ลบต่อไป |
 | `README.md`, `.gitattributes` | README เป็นของเราเอง และมีบรรทัด `README.md merge=ours` | ไม่ควรโดน conflict ถ้าตั้ง `merge.ours.driver` แล้ว ถ้าโดน ให้เอาของเรา (`git checkout --ours README.md`) |
-| `docs/brand/`, `docs/images/pdfcraft-tools.png` | ลบทิ้ง (ภาพนี้มีโลโก้ติดอยู่) | ถ้าต้นทางแก้ไฟล์เหล่านี้ จะขึ้น modify/delete ให้ลบต่อด้วย `git rm` |
+| `docs/brand/` (ยกเว้น `LICENSE-brand.txt`), `docs/images/pdfcraft-tools.png` | ลบโลโก้และภาพที่มีโลโก้ติดอยู่ แต่เก็บ `LICENSE-brand.txt` ไว้ไฟล์เดียว เพราะด่าน `cargo xtask license-check` ของต้นทางบังคับให้มี (ดู `LICENSES.toml`) | ถ้าต้นทางแก้หรือเพิ่มไฟล์ใน `docs/brand/` ให้รับ `LICENSE-brand.txt` ฉบับใหม่ของต้นทาง ที่เหลือลบต่อด้วย `git rm` |
 | `ATTRIBUTION.toml`, `ATTRIBUTION.md` | ลบรายการของ `docs/brand/*` และ `pdfcraft-tools.png` และ hash ของไอคอนที่ติดป้าย TH | รวมรายการใหม่ของต้นทางเข้ามา ห้ามเอารายการ `docs/brand/*` กลับมา แล้วรัน `cargo xtask assets --write` |
 
 test ที่เราแก้ตามไปด้วย: `crates/edit/src/tests.rs`, `crates/engine/src/links/tests.rs` และ `crates/ui-egui/tests/it/` (`content.rs`, `editing.rs`, `fonts.rs`, `links.rs`, `ui.rs`)
@@ -174,6 +174,12 @@ cargo test -p pdfcraft-ui-egui -j 2
 ```bash
 cargo xtask assets
 ```
+
+```bash
+cargo xtask license-check
+```
+
+ต้นทางใช้ `license-check` แทน `assets` ใน CI แล้ว (`assets` ยังถูกเรียกอยู่ข้างใน) ถ้า `ATTRIBUTION.md` ค้างหลังลบไฟล์ ให้รัน `cargo xtask assets --write` แล้ว commit ด้วย CI ถึงจะผ่าน
 
 test `editing::a_custom_property_whose_name_the_tools_refuse_is_listed_and_left_alone` ล้มอยู่แล้วบน `main` เมื่อ build โดยไม่มี `CRAFT_FONTS_DIR` ไม่เกี่ยวกับงานเรา ถ้ามี test อื่นล้มให้ลองเทียบกับ `main` ก่อนเสมอ
 

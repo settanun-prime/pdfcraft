@@ -86,12 +86,18 @@ def promotions(name):
     return found
 
 
-GONE = ["docs/brand", "docs/images/pdfcraft-tools.png"]
+GONE = ["docs/images/pdfcraft-tools.png"]
+# upstream's licence check requires the brand licence text, so that one file stays; the logos do not.
+BRAND_KEPT = {"LICENSE-brand.txt"}
 
 
 def brand_files():
     """The ArtCraft logos and the screenshot that shows them must not be in this edition."""
-    return [f"{name} is back; remove it, this edition carries no ArtCraft mark" for name in GONE if (ROOT / name).exists()]
+    found = [f"{name} is back; remove it, this edition carries no ArtCraft mark" for name in GONE if (ROOT / name).exists()]
+    folder = ROOT / "docs/brand"
+    if folder.is_dir():
+        found += [f"docs/brand/{f.name} is back; remove it, this edition carries no ArtCraft mark" for f in sorted(folder.iterdir()) if f.name not in BRAND_KEPT]
+    return found
 
 
 def icon_hashes():
