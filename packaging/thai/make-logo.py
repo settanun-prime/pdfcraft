@@ -5,8 +5,8 @@
     python3 packaging/thai/make-logo.py --trace    first re-trace the words from Kodchasan Bold (needs the font)
     python3 packaging/thai/make-logo.py --preview FILE.png   only write a 1024 px preview, touch nothing else
 
-The icon is a red page with a folded corner and the word pdfคับ in white. Everything is plain
-polygons, so the SVG and every PNG come from the same shapes. The outlines of the words are traced
+The icon is a red page with a folded corner and the word pdfคับ in a pale pink, with pdf large and
+คับ small. Everything is plain polygons, so the SVG and every PNG come from the same shapes. The outlines of the words are traced
 from Kodchasan Bold (SIL Open Font License 1.1) and stored in logo-glyphs.json, so drawing needs
 neither the font nor any tool besides Pillow and, on a Mac, iconutil.
 
@@ -29,7 +29,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 ICONS = ROOT / "assets/app-icon"
 GLYPHS = pathlib.Path(__file__).with_name("logo-glyphs.json")
 ID = "ai.storyteller.pdfcraft"
-RED_TOP, RED_BOTTOM, WHITE, FOLD = "#f2382b", "#c9150f", "#ffffff", "#ff9d92"
+RED, INK, FOLD = "#c8102e", "#ffe3de", "#8e0a20"
 WORDS = ("pdf", "คับ")
 
 
@@ -152,7 +152,7 @@ def trace():
 
 
 # ---- the drawing ---------------------------------------------------------------------------------
-def page(cut=148, r=112):
+def page(cut=100, r=112):
     """A rounded square with its top right corner cut off for the fold."""
     pts = [(512 - cut, 0), (512, cut)]
     for cx, cy, a0 in ((512 - r, 512 - r, 0), (r, 512 - r, 90), (r, r, 180)):
@@ -165,10 +165,10 @@ def bounds(loops):
     return min(xs), min(ys), max(xs), max(ys)
 
 
-def at_left(loops, x, top, height):
-    """Scale to `height` with the top left of the ink at (x, top)."""
-    x0, y0, _, y1 = bounds(loops)
-    k = height / (y1 - y0)
+def at_left(loops, x, top, width):
+    """Scale to `width` with the top left of the ink at (x, top)."""
+    x0, y0, x1, _ = bounds(loops)
+    k = width / (x1 - x0)
     return [[(x + (px - x0) * k, top + (py - y0) * k) for px, py in lp] for lp in loops]
 
 
@@ -180,12 +180,12 @@ def centred(loops, cx, cy, width):
 
 
 def layers(glyphs):
-    """(fill, loops) from bottom to top, in a 512 px square. A tuple fill is a top to bottom gradient."""
+    """(colour, loops) from bottom to top, in a 512 px square."""
     return [
-        ((RED_TOP, RED_BOTTOM), [page()]),
-        (FOLD, [[(364, 0), (512, 148), (392, 148), (364, 120)]]),
-        (WHITE, at_left(glyphs["pdf"], 54, 56, 112)),
-        (WHITE, centred(glyphs["คับ"], 258, 336, 416)),
+        (RED, [page()]),
+        (FOLD, [[(412, 0), (512, 100), (440, 100), (412, 72)]]),
+        (INK, at_left(glyphs["pdf"], 44, 110, 404)),
+        (INK, centred(glyphs["คับ"], 330, 408, 232)),
     ]
 
 
@@ -199,14 +199,9 @@ def svg(glyphs):
     def d(loops):
         return "".join("M" + "L".join(f"{x:.1f} {y:.1f}" for x, y in lp) + "Z" for lp in loops)
 
-    paths = []
-    for fill, loops in layers(glyphs):
-        paint = "url(#red)" if isinstance(fill, tuple) else fill
-        paths.append(f'<path fill="{paint}" fill-rule="evenodd" d="{d(loops)}"/>')
+    paths = "".join(f'<path fill="{colour}" fill-rule="evenodd" d="{d(loops)}"/>' for colour, loops in layers(glyphs))
     return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img"><title>pdfคับ</title>'
-            f'<defs><linearGradient id="red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{RED_TOP}"/>'
-            f'<stop offset="1" stop-color="{RED_BOTTOM}"/></linearGradient></defs>'
-            f'<g id="thai-logo">{"".join(paths)}</g></svg>\n')
+            f'<g id="thai-logo">{paths}</g></svg>\n')
 
 
 def rgb(colour):
@@ -219,22 +214,14 @@ def render(glyphs, size, mac):
     n = size * ss
     k = n / 1024 * (824 / 512) if mac else n / 512
     off = n * 100 / 1024 if mac else 0
-    img = Image.new("RGBA", (n, n), rgb(RED_BOTTOM) + (0,))  # transparent but red, so the edge blends to red
+    img = Image.new("RGBA", (n, n), rgb(RED) + (0,))  # transparent but red, so the edge blends to red
 
-    def gradient(top, bottom):
-        strip = Image.new("RGBA", (1, n))
-        a, b = rgb(top), rgb(bottom)
-        for y in range(n):
-            f = min(max((y - off) / (512 * k), 0), 1)
-            strip.putpixel((0, y), tuple(round(p + (q - p) * f) for p, q in zip(a, b)) + (255,))
-        return strip.resize((n, n))
-
-    for fill, loops in layers(glyphs):
+    for colour, loops in layers(glyphs):
         mask = Image.new("L", (n, n), 0)
         draw = ImageDraw.Draw(mask)
         for depth, lp in by_depth(loops):
             draw.polygon([(off + x * k, off + y * k) for x, y in lp], fill=0 if depth % 2 else 255)
-        img.paste(gradient(*fill) if isinstance(fill, tuple) else fill, (0, 0), mask)
+        img.paste(colour, (0, 0), mask)
     return img.resize((size, size), Image.BOX)
 
 

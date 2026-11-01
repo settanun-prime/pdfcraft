@@ -1,12 +1,12 @@
 # pdfคับ app icon
 
-<img src="pdfcraft-small.svg" alt="pdfคับ app icon: the word pdfคับ in white on a red page with a folded corner" width="128">
+<img src="pdfcraft-small.svg" alt="pdfคับ app icon: the word pdfคับ in pale pink on a red page with a folded corner" width="128">
 
-**Design:** the tile itself is a red page with its top right corner folded, carrying the word pdfคับ in white:
-pdf small at the top left, คับ large across the page. Red is the colour people already expect of a PDF. Plain
-polygons and one gradient, so the SVG and every PNG come from the same shapes.
+**Design:** the tile itself is a red page with its top right corner folded, carrying the word pdfคับ in pale pink:
+pdf large across the page, คับ small beside the tail of the p. Red is the colour people already expect of a PDF.
+Plain polygons only, so the SVG and every PNG come from the same shapes.
 
-**Palette:** red `#f2382b` to `#c9150f` (top to bottom), white `#ffffff`, fold `#ff9d92`.
+**Palette:** red `#c8102e`, pale pink `#ffe3de`, fold `#8e0a20`.
 
 **Tile:** `viewBox="0 0 512 512"`, corners `r=112`. Windows and Linux icons are full bleed. macOS icons put it on
 Apple's grid (an 824 px body centred on a transparent 1024 px canvas).
