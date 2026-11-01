@@ -1,0 +1,54 @@
+name: Thai build
+
+# Our own build of the Thai edition on GitHub's free runners. This repository is public, so the
+# minutes are not charged. It stands in for upstream's release.yml, which needs Apple and Azure
+# signing secrets and a paid large macOS runner. Nothing here is signed or notarized;
+# artifacts are kept for 7 days. Start it by hand (Actions > Thai build > Run workflow).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: thai-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Compiled into `--version` and About, so this build can't be mistaken for upstream's release.
+  PDFCRAFT_BUILD_LABEL: thai
+
+jobs:
+  macos:
+    name: macOS (Apple silicon)
+    # macos-latest is a standard Apple silicon runner, free for public repositories.
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build, ad-hoc sign, package
+        run: packaging/macos/package.sh --arch aarch64
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pdfcraft-th-macos-aarch64
+          path: dist/release/*
+          retention-days: 7
+          if-no-files-found: error
+
+  windows:
+    name: Windows x64 (portable zip)
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build and pack
+        shell: pwsh
+        run: ./packaging/thai/windows-portable.ps1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pdfcraft-th-windows-x64
+          path: dist/release/*.zip
+          retention-days: 7
+          if-no-files-found: error

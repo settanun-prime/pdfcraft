@@ -30,7 +30,7 @@ Branch `custom/thai-no-ads` เพิ่มสี่เรื่องจาก�
 | font ตอนแสดงบนจอ | อ่าน font ที่ติดตั้งในเครื่องมาวาดบนจอเป็นเรื่องปกติ ไม่คัดลอก ไม่แจก | ใช้ Sukhumvit Set, Sathu, Tahoma แสดงบนจอเท่านั้น |
 | font ตอนเขียนลง PDF | ลงไปในไฟล์ที่ส่งต่อได้ จึงต้องมีสัญญาเปิด (`embedding::validate_document_input`) | เขียนด้วย Sarabun หรือ Noto Sans Thai (OFL) เท่านั้น Tahoma และ font ที่มากับ Word ไม่ถูกฝัง แม้ font จะอนุญาตให้ฝังก็ตาม |
 
-**ยังไม่ได้ทำความสะอาด** ชื่อ ArtCraft ที่เป็นข้อความธรรมดายังอยู่ใน `packaging/` (installer ของ Windows, metainfo ของ Linux, flatpak, `Credits.rtf`), ไฟล์แปลภาษาใน `crates/ui-egui/src/i18n/`, `AGENTS.md`, `ROADMAP.md` และ `docs/` เราไม่ได้ใช้ไฟล์เหล่านี้ใน `PdfCraft TH.app` ก่อนจะสร้าง installer หรือแจกไฟล์ติดตั้งจาก branch นี้ ต้องแก้ไฟล์ใน `packaging/` ให้ไม่ใช้ชื่อ ArtCraft เป็นผู้เผยแพร่ก่อน
+**ยังไม่ได้ทำความสะอาด** ชื่อ ArtCraft ที่เป็นข้อความธรรมดายังอยู่ใน `packaging/` (installer ของ Windows, metainfo ของ Linux, flatpak), ไฟล์แปลภาษาใน `crates/ui-egui/src/i18n/`, `AGENTS.md`, `ROADMAP.md` และ `docs/` เราไม่ได้ใช้ไฟล์เหล่านี้ใน `PdfCraft TH.app` ก่อนจะสร้าง installer หรือแจกไฟล์ติดตั้งจาก branch นี้ ต้องแก้ไฟล์ใน `packaging/` ให้ไม่ใช้ชื่อ ArtCraft เป็นผู้เผยแพร่ก่อน ตัว build ฟรีของเรา (`.github/workflows/thai-build.yml`) ไม่ใช้ไฟล์เหล่านั้น: Mac ใช้ `package.sh` กับ `Credits.rtf` ที่เราแก้แล้ว ส่วน Windows ทำแค่ zip แบบพกพา ไม่ทำ MSI
 
 ## เวลาต้นทางมี update
 
@@ -127,6 +127,8 @@ git push origin custom/thai-no-ads
 | `README.md`, `.gitattributes` | README เป็นของเราเอง และมีบรรทัด `README.md merge=ours` | ไม่ควรโดน conflict ถ้าตั้ง `merge.ours.driver` แล้ว ถ้าโดน ให้เอาของเรา (`git checkout --ours README.md`) |
 | `docs/brand/` (ยกเว้น `LICENSE-brand.txt`), `docs/images/pdfcraft-tools.png` | ลบโลโก้และภาพที่มีโลโก้ติดอยู่ แต่เก็บ `LICENSE-brand.txt` ไว้ไฟล์เดียว เพราะด่าน `cargo xtask license-check` ของต้นทางบังคับให้มี (ดู `LICENSES.toml`) | ถ้าต้นทางแก้หรือเพิ่มไฟล์ใน `docs/brand/` ให้รับ `LICENSE-brand.txt` ฉบับใหม่ของต้นทาง ที่เหลือลบต่อด้วย `git rm` |
 | `ATTRIBUTION.toml`, `ATTRIBUTION.md` | ลบรายการของ `docs/brand/*` และ `pdfcraft-tools.png` และ hash ของไอคอนที่ติดป้าย TH | รวมรายการใหม่ของต้นทางเข้ามา ห้ามเอารายการ `docs/brand/*` กลับมา แล้วรัน `cargo xtask assets --write` |
+| `packaging/macos/Credits.rtf` | ข้อความเป็นของเรา ไม่มีลิงก์ Discord หรือเว็บ ArtCraft และบอกว่าเป็นฉบับไม่เป็นทางการ | เอาของเรา ถ้าต้นทางแก้ไฟล์นี้ให้ดูว่าเพิ่มลิงก์โปรโมทไหม แล้วรับเฉพาะส่วนที่ไม่ใช่โปรโมท |
+| `.github/workflows/thai-build.yml`, `packaging/thai/` | ไฟล์ของเราเอง ต้นทางไม่มี จึงไม่ชน | เก็บไว้ทั้งหมด |
 
 test ที่เราแก้ตามไปด้วย: `crates/edit/src/tests.rs`, `crates/engine/src/links/tests.rs` และ `crates/ui-egui/tests/it/` (`content.rs`, `editing.rs`, `fonts.rs`, `links.rs`, `ui.rs`)
 
@@ -149,6 +151,17 @@ cargo xtask assets --write
 ```
 
 ต้องใช้ Pillow ของ Python และรันบน Mac เพื่อให้ได้ไฟล์ `.icns`
+
+## Build และแจกไฟล์ (ฟรี ไม่ลงชื่อ)
+
+ไม่ใช้ `release.yml` ของต้นทาง เพราะบน branch `release` มันบังคับลงชื่อและ notarize ด้วยบัญชี Apple กับ Azure ที่เราไม่มี และ job ของ Mac ใช้เครื่องขนาดใหญ่ที่เสียเงิน ห้ามสร้าง branch ชื่อ `release` ใน fork นี้ เราใช้ `.github/workflows/thai-build.yml` ซึ่งรันเฉพาะตอนสั่งเอง (Actions > Thai build > Run workflow) บนเครื่องมาตรฐานของ GitHub (`macos-latest`, `windows-latest`) ซึ่ง repo สาธารณะใช้ฟรี ถ้าเปลี่ยน `runs-on` ให้ตรวจก่อนว่าเครื่องนั้นฟรี `custom-check.py` จะแจ้งถ้าไฟล์นี้มีเครื่องขนาดใหญ่
+
+| ระบบ | ได้อะไร | วิธีทำ |
+|---|---|---|
+| Mac (Apple silicon) | DMG กับ zip ของ CLI ลงชื่อแบบ ad hoc ไม่ผ่าน notarize | `packaging/macos/package.sh --arch aarch64` ของต้นทาง |
+| Windows x64 | zip แบบพกพา (exe, CLI, ใบอนุญาต, models, `portable.txt`) ไม่มี MSI เพราะไฟล์ WiX ใช้ชื่อ ArtCraft | `packaging/thai/windows-portable.ps1` |
+
+ทุก build ตั้ง `PDFCRAFT_BUILD_LABEL=thai` ให้ `--version` และหน้า About บอกว่าเป็นฉบับนี้ ไฟล์ไม่ได้ลงชื่อ จึงต้องเตือนผู้ใช้ว่า macOS (Gatekeeper) และ Windows (SmartScreen) จะถามยืนยันก่อนเปิด ผลลัพธ์เก็บเป็น artifact 7 วันและ repo เป็นสาธารณะ ใครล็อกอิน GitHub ก็โหลดได้ ก่อนรันให้รัน `python3 packaging/custom-check.py` ให้ผ่านก่อน
 
 ## font ที่ใช้
 
@@ -230,4 +243,4 @@ cargo run -p pdfcraft -- ไฟล์.pdf
 - ตัวหนาและตัวเอียงตอนเขียนไทยลง PDF: ใช้ face Regular อย่างเดียว
 - Edit Text กับข้อความที่หมุนอยู่ หรือการเปลี่ยนตัวหนาหรือ font พร้อมกับพิมพ์ไทย จะขึ้น error
 - หน้า PDF ที่ไม่ฝัง font แก้เฉพาะตอนดูบนจอ ไม่รวมตอนพิมพ์หรือ export และต้องเป็น font ชนิด CID ที่ชื่อเป็น font ไทย
-- ยังไม่ได้ทำความสะอาดชื่อ ArtCraft ในไฟล์ของ `packaging/` ดูหัวข้อ "ใบอนุญาต"
+- ไฟล์ติดตั้ง Linux (nfpm, flatpak) และ MSI ของ Windows ยังใช้ชื่อ ArtCraft ใน `packaging/` เราจึงยังไม่สร้างสองอย่างนี้ ดูหัวข้อ "Build และแจกไฟล์"

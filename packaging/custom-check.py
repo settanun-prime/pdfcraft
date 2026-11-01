@@ -30,6 +30,8 @@ COMMANDS = "crates/engine/src/commands.rs"
 LINKS = "crates/engine/src/links.rs"
 README = "README.md"
 ATTR = "ATTRIBUTION.toml"
+CREDITS = "packaging/macos/Credits.rtf"
+WORKFLOW = ".github/workflows/thai-build.yml"
 
 # Promotions: none of these may be on the home screen or in the title bar.
 PROMOTION = re.compile(r"discord|community|sponsor|donat|join (the|our)|newsletter", re.IGNORECASE)
@@ -49,6 +51,9 @@ ABSENT = [
     (README, "discord.gg/artcraft", "the README promotes the community again; keep this edition's own README"),
     (CRAFT, "PathBuf::from(\"/Applications/Microsoft Word.app", "a Microsoft font is a candidate for writing into PDFs again"),
     (UI_FONTS, "Thonburi.ttc", "Thonburi is listed for the interface; its marks show dotted circles without shaping"),
+    (CREDITS, "discord", "the macOS About panel links to Discord again"),
+    (CREDITS, "getartcraft.com", "the macOS About panel links to the ArtCraft site again"),
+    (WORKFLOW, "xlarge", "the Thai build uses a paid macOS runner; keep the free macos-latest"),
 ]
 
 PRESENT = [
@@ -65,6 +70,8 @@ PRESENT = [
     (VIEWER, "names_thai_family", "PDFs that don't embed a Thai font no longer use an installed one"),
     (VIEWER, '&["Supplemental/SukhumvitSet.ttc", "Supplemental/Sathu.ttf"', "Sukhumvit Set no longer comes first in the viewer; tone marks disappear without it"),
     (ICON, 'id="thai-badge"', "the app icon has no TH badge"),
+    (CREDITS, "unofficial Thai edition", "the macOS About panel no longer says this is an unofficial edition"),
+    (WORKFLOW, "runs-on: macos-latest", "the Thai build workflow is gone or no longer uses the free macOS runner"),
 ]
 
 
