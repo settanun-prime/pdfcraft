@@ -14,7 +14,7 @@ Branch `custom/thai-no-ads` เพิ่มสี่เรื่องจาก�
 - `main` ต้องตรงกับต้นทางเสมอ ห้าม commit งานของเราบน `main`
 - งานปรับแต่งทั้งหมดอยู่บน `custom/thai-no-ads`
 - ถ้าหน้า GitHub ขึ้นปุ่ม **Discard commits** ห้ามกด
-- ใช้แอปที่ build จาก branch นี้เท่านั้น ปุ่มเช็กอัปเดตในแอปชี้ไปที่ release ของต้นทาง ซึ่งไม่มีของที่เราแก้
+- ใช้แอปที่ build จาก branch นี้เท่านั้น แอปไม่เช็กอัปเดตเอง และปุ่มเช็กอัปเดตแค่เปิดหน้า release ของ fork เพราะ release ของต้นทางไม่มีของที่เราแก้
 - ไม่ส่ง branch นี้เป็น PR ไปต้นทาง เพราะเรากำหนดให้ฝัง font ที่ติดตั้งในเครื่อง (แม้เป็น OFL) ลง PDF ซึ่งขัดกับ `AGENTS.md` §1.4 ของต้นทาง และเราเอาแบรนด์ออก
 
 ## ใบอนุญาต
@@ -130,6 +130,7 @@ git push origin custom/thai-no-ads
 | `packaging/macos/Credits.rtf` | ข้อความเป็นของเรา ไม่มีลิงก์ Discord หรือเว็บ ArtCraft และบอกว่าเป็นฉบับไม่เป็นทางการ | เอาของเรา ถ้าต้นทางแก้ไฟล์นี้ให้ดูว่าเพิ่มลิงก์โปรโมทไหม แล้วรับเฉพาะส่วนที่ไม่ใช่โปรโมท |
 | `LICENSES.toml` | hash ของ `assets/app-icon/LICENSE.txt` เปลี่ยนเป็นของข้อความใบอนุญาตไอคอนใหม่ของเรา (ด่าน `license-check` บังคับให้ hash ตรง) | ถ้าโดน conflict ให้รับของต้นทางทั้งไฟล์ แล้วแก้บรรทัด `sha256` ของรายการ `assets/app-icon/LICENSE.txt` เป็นค่าจาก `shasum -a 256 assets/app-icon/LICENSE.txt` |
 | `crates/ocr/`, `crates/engine/src/ocr/`, `crates/ui-egui/src/workflows/ocr_ui.rs` | รวม PR #2520 ของต้นทาง (ยังไม่ถูก merge ที่ต้นทาง) แล้วเติมภาษาไทย: `THAI_MODEL`, การเผื่อขอบและกรองความมั่นใจใน `ppocr.rs`, `crates/ocr/build.rs` ฝังโมเดลลง exe, ค่าเริ่มต้นภาษาไทยในหน้าต่าง OCR และ `layer.rs` เปลี่ยนจาก Type 3 เป็น Type 0 ที่มีฟอนต์ว่าง เพราะ PDFKit ของ Apple มองไม่เห็นข้อความใน Type 3 ว่าง | ถ้าต้นทาง merge #2520 ให้รับของต้นทาง แล้วเก็บ 4 จุดนี้ไว้ อย่าเอา Type 3 กลับมา |
+| `apps/pdfcraft/src/main.rs`, `crates/ui-egui/src/lib.rs`, `crates/ui-egui/src/platform/updates.rs` | ไม่เช็กอัปเดตตอนเปิดแอป ปุ่มเช็กอัปเดตเปิดหน้า release ของ fork และ `UPDATE_APP.repo` เป็น fork | เก็บไว้ ถ้าปล่อยให้แอปถามต้นทาง รุ่นใหม่ของเขาจะเขียนทับฉบับไทย |
 | `.github/workflows/thai-build.yml`, `packaging/thai/` | ไฟล์ของเราเอง ต้นทางไม่มี จึงไม่ชน | เก็บไว้ทั้งหมด |
 
 test ที่เราแก้ตามไปด้วย: `crates/edit/src/tests.rs`, `crates/engine/src/links/tests.rs` และ `crates/ui-egui/tests/it/` (`content.rs`, `editing.rs`, `fonts.rs`, `links.rs`, `ui.rs`)

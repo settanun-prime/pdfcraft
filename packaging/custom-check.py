@@ -36,6 +36,8 @@ NOTES = "packaging/thai/release-notes.md"
 OCR = "crates/ocr/src/lib.rs"
 OCR_LAYER = "crates/engine/src/ocr/layer.rs"
 OCR_UI = "crates/ui-egui/src/workflows/ocr_ui.rs"
+DESKTOP = "apps/pdfcraft/src/main.rs"
+UPDATES = "crates/ui-egui/src/platform/updates.rs"
 
 # Promotions: none of these may be on the home screen or in the title bar.
 PROMOTION = re.compile(r"discord|community|sponsor|donat|join (the|our)|newsletter", re.IGNORECASE)
@@ -60,9 +62,12 @@ ABSENT = [
     (WORKFLOW, "xlarge", "the Thai build uses a paid macOS runner; keep the free macos-latest"),
     (NOTES, "discord", "the release notes promote the community again"),
     (NOTES, "getartcraft", "the release notes link to the ArtCraft site again"),
+    (DESKTOP, "set_startup_update_check(true)", "the app asks upstream for updates at start again; a newer upstream build would replace this edition"),
+    (UPDATES, "github.com/storytold/pdfcraft/releases", "Check for updates points to upstream's releases again"),
 ]
 
 PRESENT = [
+    (LIB, 'repo: "settanun-prime/pdfcraft"', "the updater can download upstream's releases again"),
     (CRAFT, "validate_document_input(&bytes)", "an installed Thai font no longer has to declare an open licence before it is written into a PDF"),
     (CRAFT, ".or_else(installed_thai_font)", "writing Thai no longer falls back to an installed font"),
     (CRAFT, "fn standalone_face", "a face can't be taken out of a .ttc any more"),

@@ -1,4 +1,4 @@
-//! Help ▸ Check for updates (issue #28), with stand-in release sources (no network).
+//! Help ▸ Check for updates and the update prompt, with stand-in release sources (no network).
 
 use std::sync::Arc;
 
@@ -22,15 +22,6 @@ fn source(answer: Result<Option<&str>, &str>) -> UpdateSource {
     Arc::new(move || answer.clone())
 }
 
-fn harness(answer: Result<Option<&str>, &str>) -> Harness<'static, PdfCraftApp> {
-    Harness::builder().with_size(egui::vec2(1200.0, 800.0)).build_eframe(move |_cc| {
-        let mut app = PdfCraftApp::new();
-        app.set_option("language", "en").unwrap();
-        app.set_update_source(source(answer));
-        app
-    })
-}
-
 /// Run frames until the background check has reported. By what the dialog shows, with the
 /// same 30-second deadline as `support::wait_until`, not for a fixed second: under load the
 /// check's thread can take longer (#1277).
@@ -48,35 +39,9 @@ fn settle(h: &mut Harness<'static, PdfCraftApp>) {
 }
 
 #[test]
-fn a_newer_release_is_offered_for_download() {
-    let mut h = harness(Ok(Some("v99.0.0")));
-    h.state_mut().execute("help.check_updates");
-    settle(&mut h);
-    h.get_by_label_contains("PdfCraft 99.0.0 is available");
-    h.get_by_label("DOWNLOAD");
-    h.get_by_label("LATER").click();
-    h.run_steps(3);
-    assert!(h.query_by_label_contains("is available").is_none(), "Later closes the dialog");
-}
-
-#[test]
-fn an_up_to_date_or_failed_check_says_so() {
-    let mut h = harness(Ok(None));
-    h.state_mut().execute("help.check_updates");
-    settle(&mut h);
-    h.get_by_label_contains("is the newest version available");
-    assert!(h.query_by_label("Download").is_none());
-
-    let mut h = harness(Err("couldn't reach GitHub"));
-    h.state_mut().execute("help.check_updates");
-    settle(&mut h);
-    h.get_by_label_contains("Could not check for updates.");
-    h.get_by_label_contains("couldn't reach GitHub");
-}
-
-#[test]
-fn nothing_is_asked_until_the_user_checks() {
-    // The check at start is opt-in (the desktop app turns it on): the source is only called from the command.
+fn checking_for_updates_opens_our_releases_and_asks_no_one() {
+    // The check at start is opt-in and the desktop app leaves it off: upstream's releases would
+    // replace this edition, so the command only opens the page.
     let calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let counted = calls.clone();
     let mut h = Harness::builder().with_size(egui::vec2(1200.0, 800.0)).build_eframe(move |_cc| {
@@ -92,12 +57,11 @@ fn nothing_is_asked_until_the_user_checks() {
         app
     });
     settle(&mut h);
-    assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 0);
-    assert!(h.query_by_label_contains("is available").is_none());
     h.state_mut().execute("help.check_updates");
     settle(&mut h);
-    assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
-    h.get_by_label_contains("PdfCraft 99.0.0 is available");
+    assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 0);
+    assert!(h.query_by_label_contains("is available").is_none());
+    assert_eq!(h.state().last_opened_url.as_deref(), Some("https://github.com/settanun-prime/pdfcraft/releases"));
 }
 
 #[test]

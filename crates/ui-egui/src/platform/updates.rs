@@ -9,8 +9,9 @@ use craft_update::{CheckResultDialog, CheckResultResponse};
 
 use crate::PdfCraftApp;
 
-/// Where every PdfCraft release is listed.
-pub const RELEASES_PAGE: &str = "https://github.com/storytold/pdfcraft/releases";
+/// Where every release of this edition is listed. Upstream's releases have none of its changes, so
+/// nothing here asks them for a newer version.
+pub const RELEASES_PAGE: &str = "https://github.com/settanun-prime/pdfcraft/releases";
 
 /// Stands in for the network in tests.
 #[cfg(not(target_arch = "wasm32"))]
@@ -55,17 +56,9 @@ impl PdfCraftApp {
         self.updates.updater = Updater::new(&crate::UPDATE_APP, env!("CARGO_PKG_VERSION")).with_source(source);
     }
 
-    /// Help ▸ Check for updates: ask for the latest release and show the outcome.
+    /// Help ▸ Check for updates: show this edition's releases.
     pub fn check_for_updates(&mut self) {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            self.updates.open = true;
-            self.updates.check_requested = true;
-        }
-        #[cfg(target_arch = "wasm32")]
-        {
-            self.open_url(RELEASES_PAGE);
-        }
+        self.open_url(RELEASES_PAGE);
     }
 
     /// Starts the checks and picks up their answers (each frame).
