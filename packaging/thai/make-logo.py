@@ -6,7 +6,7 @@
     python3 packaging/thai/make-logo.py --preview FILE.png   only write a 1024 px preview, touch nothing else
 
 The icon is a red page with a folded corner and the word pdfคับ in a pale pink, with pdf large and
-คับ small. Everything is plain polygons, so the SVG and every PNG come from the same shapes. The outlines of the words are traced
+tilted away from the fold, and คับ small. Everything is plain polygons, so the SVG and every PNG come from the same shapes. The outlines of the words are traced
 from Kodchasan Bold (SIL Open Font License 1.1) and stored in logo-glyphs.json, so drawing needs
 neither the font nor any tool besides Pillow and, on a Mac, iconutil.
 
@@ -179,13 +179,21 @@ def centred(loops, cx, cy, width):
     return [[(cx + (px - (x0 + x1) / 2) * k, cy + (py - (y0 + y1) / 2) * k) for px, py in lp] for lp in loops]
 
 
+def tilted(loops, degrees):
+    """Turned clockwise around the centre of the ink."""
+    x0, y0, x1, y1 = bounds(loops)
+    cx, cy, a = (x0 + x1) / 2, (y0 + y1) / 2, math.radians(degrees)
+    c, s = math.cos(a), math.sin(a)
+    return [[(cx + (x - cx) * c - (y - cy) * s, cy + (x - cx) * s + (y - cy) * c) for x, y in lp] for lp in loops]
+
+
 def layers(glyphs):
-    """(colour, loops) from bottom to top, in a 512 px square."""
+    """(colour, loops) from bottom to top, in a 512 px square. pdf tilts down to the right, away from the fold."""
     return [
         (RED, [page()]),
         (FOLD, [[(412, 0), (512, 100), (440, 100), (412, 72)]]),
-        (INK, at_left(glyphs["pdf"], 44, 110, 404)),
-        (INK, centred(glyphs["คับ"], 330, 408, 232)),
+        (INK, tilted(at_left(glyphs["pdf"], 40, 96, 404), 6)),
+        (INK, centred(glyphs["คับ"], 330, 412, 232)),
     ]
 
 

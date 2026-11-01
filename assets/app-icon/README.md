@@ -3,7 +3,7 @@
 <img src="pdfcraft-small.svg" alt="pdfคับ app icon: the word pdfคับ in pale pink on a red page with a folded corner" width="128">
 
 **Design:** the tile itself is a red page with its top right corner folded, carrying the word pdfคับ in pale pink:
-pdf large across the page, คับ small beside the tail of the p. Red is the colour people already expect of a PDF.
+pdf large across the page and tilted 6 degrees away from the fold, คับ small beside the tail of the p. Red is the colour people already expect of a PDF.
 Plain polygons only, so the SVG and every PNG come from the same shapes.
 
 **Palette:** red `#c8102e`, pale pink `#ffe3de`, fold `#8e0a20`.
