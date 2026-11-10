@@ -36,6 +36,8 @@ NOTES = "packaging/thai/release-notes.md"
 OCR = "crates/ocr/src/lib.rs"
 OCR_LAYER = "crates/engine/src/ocr/layer.rs"
 OCR_UI = "crates/ui-egui/src/workflows/ocr_ui.rs"
+OCR_PP = "crates/ocr/src/pp.rs"
+OCR_ENGINE = "crates/engine/src/ocr.rs"
 DESKTOP = "apps/pdfcraft/src/main.rs"
 UPDATES = "crates/ui-egui/src/platform/updates.rs"
 
@@ -63,10 +65,12 @@ ABSENT = [
     (NOTES, "discord", "the release notes promote the community again"),
     (NOTES, "getartcraft", "the release notes link to the ArtCraft site again"),
     (DESKTOP, "set_startup_update_check(true)", "the app asks upstream for updates at start again; a newer upstream build would replace this edition"),
-    (UPDATES, "github.com/storytold/pdfcraft/releases", "Check for updates points to upstream's releases again"),
+    (UPDATES, "RELEASES_PAGE: &str = \"https://github.com/storytold", "Check for updates points to upstream's releases again"),
 ]
 
 PRESENT = [
+    (WORKFLOW, "CRAFT_I18N_REQUIRED=1", "the Thai build no longer brings the translations; its interface would be English only"),
+    (WORKFLOW, "CRAFT_FONTS_REQUIRED=1", "the Thai build no longer brings craft-fonts (Noto Sans Thai)"),
     (LIB, 'repo: "settanun-prime/pdfcraft"', "the updater can download upstream's releases again"),
     (CRAFT, "validate_document_input(&bytes)", "an installed Thai font no longer has to declare an open licence before it is written into a PDF"),
     (CRAFT, ".or_else(installed_thai_font)", "writing Thai no longer falls back to an installed font"),
@@ -76,8 +80,6 @@ PRESENT = [
     (UI_FONTS, "fn thai_face", "the Thai interface face is no longer picked by style, so Sukhumvit Set draws in Thin"),
     (UI_FONTS, 'macos_candidates(&["SukhumvitSet.ttc"', "Sukhumvit Set no longer comes first for the interface"),
     (THEME, "thai_fallback()", "the installed Thai font is not on the interface"),
-    (EDIT, "resolver.thai_face(first, draft)", "Edit Text no longer picks a Thai face for the paragraph"),
-    (EDIT, "pdfcraft_fonts::source_shaping::shape(face.bytes, text)", "shape_source no longer falls back to a Thai face"),
     (VIEWER, "names_thai_family", "PDFs that don't embed a Thai font no longer use an installed one"),
     (VIEWER, '&["Supplemental/SukhumvitSet.ttc", "Supplemental/Sathu.ttf"', "Sukhumvit Set no longer comes first in the viewer; tone marks disappear without it"),
     (ICON, 'id="thai-logo"', "the app icon is not the Thai logo (the upstream lion is back?)"),
@@ -86,9 +88,11 @@ PRESENT = [
     (WORKFLOW, "--draft", "the Thai build would publish a release without a draft stage"),
     (NOTES, "unofficial Thai edition", "the release notes no longer say this is an unofficial edition"),
     (OCR, '("th", "Thai and English")', "Thai is gone from the OCR languages"),
-    (OCR, "THAI_MIN_SCORE", "Thai OCR no longer filters out artwork read as letters"),
+    (OCR_PP, "THAI_MIN_SCORE", "Thai OCR no longer filters out artwork read as letters"),
+    (OCR_ENGINE, "pdfcraft_ocr::pp::is_pp_language(&settings.language)", "Thai no longer reads with PP-OCR; upstream's ocrs reads only Latin letters"),
     (OCR_LAYER, "fn invisible_font", "the OCR text layer is no longer the Type 0 font Apple's PDF reader can see"),
     (OCR_UI, 'available_for("th")', "the OCR dialog no longer opens on Thai"),
+    (OCR_UI, "settings.read_pictures = true", "Edit no longer reads the picture on a page that also has text (a certificate)"),
     (ATTR, 'file = "thai-recognition.onnx"', "the Thai OCR model is no longer fetched"),
 ]
 

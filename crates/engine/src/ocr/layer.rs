@@ -1,7 +1,7 @@
 //! Unicode search text has no visible glyphs. A composite font with one blank TrueType glyph
 //! supplies advance widths and a ToUnicode map, so no display font is needed. It is embedded
 //! rather than left out because PDF readers do not agree on anything less: Apple's PDFKit found
-//! no text at all in the empty Type 3 font this replaced.
+//! no text at all in the empty Type 3 font upstream writes.
 
 use std::collections::BTreeMap;
 
@@ -9,21 +9,38 @@ use pdfcraft_cos::{Dict, Document, Object, PdfString, Stream};
 use pdfcraft_edit::EditError;
 use pdfcraft_ocr::PlacedWord;
 
+/// Refuse oversized text or invalid geometry before cloning words or allocating fonts.
+/// These limits apply to the complete input, including all editable export pages.
+pub(crate) fn validate_words<'a>(words: impl IntoIterator<Item = &'a PlacedWord>) -> Result<usize, EditError> {
+    let mut count = 0usize;
+    let mut length = 0usize;
+    for w in words {
+        count += 1;
+        length = length.checked_add(w.text.len()).ok_or_else(|| EditError::Invalid("OCR text layer is too large".into()))?;
+        if count > 65536 || length > 4 * 1024 * 1024 {
+            return Err(EditError::Invalid("OCR text layer is too large".into()));
+        }
+        if !w.origin.iter().chain(&w.across).chain(&w.up).all(|v| v.is_finite())
+            || !w.across[0].hypot(w.across[1]).is_finite()
+            || !w.up[0].hypot(w.up[1]).is_finite()
+            || (0..2).any(|i| !(w.origin[i] + 0.2 * w.up[i]).is_finite() || !(w.origin[i] + w.across[i] + 0.2 * w.up[i]).is_finite())
+        {
+            return Err(EditError::Invalid("OCR text coordinates must be finite".into()));
+        }
+    }
+    Ok(count)
+}
+
 pub(crate) fn add_text(doc: &mut Document, page: usize, words: &[PlacedWord]) -> Result<(), EditError> {
-    let length = words.iter().try_fold(0usize, |n, w| n.checked_add(w.text.len()));
-    if length.is_none_or(|n| n > 4 * 1024 * 1024) || words.len() > 65536 {
-        return Err(EditError::Invalid("OCR text layer is too large".into()));
-    }
-    if words.iter().any(|w| !w.origin.iter().chain(&w.across).chain(&w.up).all(|v| v.is_finite())) {
-        return Err(EditError::Invalid("OCR text coordinates must be finite".into()));
-    }
+    validate_words(words)?;
     // Keep the existing Latin layout, including Helvetica's proportional advance widths.
     if words.iter().all(|w| {
         w.text
             .chars()
             .all(|c| matches!(c, '\u{20}'..='\u{7e}' | '\u{a0}'..='\u{ff}' | '€' | '‚' | '„' | '…' | '‘' | '’' | '“' | '”' | '•' | '–' | '—' | '™'))
     }) {
-        return pdfcraft_edit::stamp(doc, page, "OCR", pdfcraft_ocr::text_layer(words)).map(|_| ());
+        pdfcraft_edit::stamp(doc, page, "OCR", pdfcraft_ocr::text_layer(words, &pdfcraft_fonts::TextPlan::default()))?;
+        return Ok(());
     }
     let p = pdfcraft_model::pages(doc).get(page).cloned().ok_or_else(|| EditError::Invalid("OCR page does not exist".into()))?;
     let mut res = p.dict.get(b"Resources").map(|r| doc.resolve(r)).and_then(|r| r.as_dict().cloned()).unwrap_or_default();

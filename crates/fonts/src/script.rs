@@ -134,6 +134,17 @@ impl OutlinePen for Flatten {
     }
 }
 
+/// Whether the face has a glyph for `ch` (a cheap character-map probe, no outline work).
+pub fn face_has(bytes: &[u8], ch: char) -> bool {
+    FontRef::new(bytes).is_ok_and(|font| font.charmap().map(ch).is_some())
+}
+
+/// Return one glyph of `face` (a craft-fonts face), bounded so hostile replacement text cannot
+/// allocate unbounded outline data.
+pub fn craft_glyph(face: &crate::CraftFont, ch: char) -> Result<GlyphOutline, GlyphError> {
+    glyph_in_face(face.bytes, ch)
+}
+
 /// Return one glyph of the Japanese document face ([`crate::document_japanese_font`], Shippori
 /// Mincho from craft-fonts), bounded so hostile replacement text cannot allocate unbounded
 /// outline data. [`GlyphError::NoFont`] when the build has no Japanese face.
@@ -145,17 +156,27 @@ pub fn japanese_glyph(ch: char) -> Result<GlyphOutline, GlyphError> {
 /// The bounded outline and advance from the explicitly selected craft-fonts face.
 /// Uses the same complexity and missing-glyph checks as [`japanese_glyph`].
 pub fn japanese_glyph_from(face: &crate::CraftFont, ch: char) -> Result<GlyphOutline, GlyphError> {
-    let Ok(font) = FontRef::new(face.bytes) else { return Err(GlyphError::Missing) };
+    glyph_in_face(face.bytes, ch)
+}
+
+fn glyph_in_face(bytes: &[u8], ch: char) -> Result<GlyphOutline, GlyphError> {
+    let Ok(font) = FontRef::new(bytes) else { return Err(GlyphError::Missing) };
     let loc = LocationRef::default();
     let metrics = font.metrics(Size::unscaled(), loc);
     let scale = 1.0 / metrics.units_per_em.max(1) as f64;
     let Some(gid) = font.charmap().map(ch) else { return Err(GlyphError::Missing) };
     let advances = font.glyph_metrics(Size::unscaled(), loc);
     let width = advances.advance_width(gid).unwrap_or(0.0) as f64 * scale;
-    if !width.is_finite() || width <= 0.0 || width > 2.0 {
+    // Thai vowel and tone marks have no advance: their outlines sit over the letter before them.
+    if !width.is_finite() || width < 0.0 || (width == 0.0 && !thai_mark(ch)) || width > 2.0 {
         return Err(GlyphError::Missing);
     }
     bounded_outline(&font, gid, width)
+}
+
+/// A Thai mark drawn above or below the letter before it (sara i, mai ek, …), with no advance.
+fn thai_mark(ch: char) -> bool {
+    matches!(ch, '\u{0E31}' | '\u{0E34}'..='\u{0E3A}' | '\u{0E47}'..='\u{0E4E}')
 }
 
 /// Glyph `gid` of `font` in em units with advance `width`, bounded like [`japanese_glyph`].
@@ -257,6 +278,23 @@ pub fn script_outline(text: &str) -> ScriptOutline {
 
 #[cfg(test)]
 mod tests {
+    /// Thai marks have no advance but still draw, so recognized Thai keeps its vowels and tones in
+    /// editable output. Skipped without an openly licensed Thai font.
+    #[test]
+    fn thai_marks_draw_with_no_advance() {
+        let Some(face) = crate::document_thai_font() else {
+            eprintln!("skipped: no Thai font");
+            return;
+        };
+        for mark in ['ิ', '่', 'ั', 'ุ'] {
+            let g = super::craft_glyph(face, mark).unwrap_or_else(|e| panic!("{mark}: {e:?}"));
+            assert_eq!(g.width, 0.0, "{mark}");
+            assert!(!g.contours.is_empty(), "{mark} draws");
+        }
+        assert!(super::craft_glyph(face, 'ก').is_ok_and(|g| g.width > 0.0));
+        assert!(!super::thai_mark('ก') && !super::thai_mark('a'));
+    }
+
     #[test]
     fn long_names_keep_every_glyph_with_bounded_outline_work() {
         let text = "Alexandria Catherine Elizabeth Montgomery-Wellington";

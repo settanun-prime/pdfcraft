@@ -1,6 +1,6 @@
-//! PP-OCR recognition (Chinese, accented Latin) on the local RTen runtime: CTC decoding of a
-//! mobile recognition model over line crops. The detector and reading-order analysis are
-//! shared with the English recogniser (ocrs).
+//! PP-OCR recognition (Thai, Chinese, accented Latin) on the local RTen runtime: CTC decoding of
+//! a mobile recognition model over line crops. The detector and reading-order analysis are
+//! ocrs's (see `pp`).
 
 use std::io::Read;
 use std::path::Path;
@@ -65,18 +65,21 @@ impl PpOcr {
         Self { padding, min_score, ..self }
     }
 
-    pub fn recognize(&self, rgb: &[u8], width: u32, height: u32, rect: [f32; 4], preferred: &str) -> Result<String, OcrError> {
+    /// Read the line in `rect` of an RGB image, with the reading's score, 0 to 1 (0 for nothing
+    /// read).
+    pub fn read(&self, rgb: &[u8], width: u32, height: u32, rect: [f32; 4], preferred: &str) -> Result<(String, f32), OcrError> {
         let values = self.scores(rgb, width, height, rect)?;
         if values.is_empty() {
-            return Ok(String::new());
+            return Ok((String::new(), 0.0));
         }
         let text = decode(&values, &self.alphabet, preferred)?;
+        let score = score(&values, self.alphabet.len());
         // A lone character needs a clear lead: decorations read as single letters.
         let needed = if text.chars().count() == 1 { self.min_score.max(LONE_CHARACTER_SCORE) } else { self.min_score };
-        if self.min_score > 0.0 && score(&values, self.alphabet.len()) < needed {
-            return Ok(String::new());
+        if self.min_score > 0.0 && score < needed {
+            return Ok((String::new(), 0.0));
         }
-        Ok(text)
+        Ok((text, score))
     }
 
     /// One score per class for every time step. An empty crop is an empty vector.
@@ -228,18 +231,18 @@ mod tests {
     /// Skipped when the Latin model has not been fetched.
     #[test]
     fn an_overlong_crop_is_read_instead_of_refused() {
-        let Some(models) = crate::Models::find_for("la") else {
+        let Some(models) = crate::pp::PpModels::find("la") else {
             eprintln!("skipped: Latin OCR models not installed");
             return;
         };
-        let ocr = PpOcr::load(&models.recognition, &models.recognition.with_file_name(crate::LATIN_DICTIONARY), 504).unwrap();
+        let ocr = PpOcr::load(&models.recognition, &models.recognition.with_file_name(crate::pp::LATIN_DICTIONARY), 504).unwrap();
         let (w, h) = (6000u32, 40u32);
         let rgb = vec![255u8; (w * h * 3) as usize];
-        let wide = ocr.recognize(&rgb, w, h, [0.0, 0.0, w as f32, h as f32], "");
+        let wide = ocr.read(&rgb, w, h, [0.0, 0.0, w as f32, h as f32], "");
         assert!(wide.is_ok(), "an over-wide crop must not fail the page: {wide:?}");
-        let at_limit = ocr.recognize(&rgb, w, h, [0.0, 0.0, 4096.0, 40.0], "");
+        let at_limit = ocr.read(&rgb, w, h, [0.0, 0.0, 4096.0, 40.0], "");
         assert!(at_limit.is_ok(), "{at_limit:?}");
-        let err = ocr.recognize(&rgb, w, h, [f32::NAN, 0.0, 10.0, 10.0], "");
+        let err = ocr.read(&rgb, w, h, [f32::NAN, 0.0, 10.0, 10.0], "");
         assert!(err.as_ref().is_err_and(|e| e.to_string().contains("non-finite")), "{err:?}");
     }
 
@@ -300,11 +303,11 @@ mod tests {
     /// that scale. Skipped when the model has not been fetched.
     #[test]
     fn the_latin_recogniser_emits_a_probability_per_class() {
-        let Some(models) = crate::Models::find_for("la") else {
+        let Some(models) = crate::pp::PpModels::find("la") else {
             eprintln!("skipped: Latin OCR models not installed");
             return;
         };
-        let ocr = PpOcr::load(&models.recognition, &models.recognition.with_file_name(crate::LATIN_DICTIONARY), 504).unwrap();
+        let ocr = PpOcr::load(&models.recognition, &models.recognition.with_file_name(crate::pp::LATIN_DICTIONARY), 504).unwrap();
         let (w, h) = (120u32, 40u32);
         let mut rgb = vec![255u8; (w * h * 3) as usize];
         for x in 8..100 {

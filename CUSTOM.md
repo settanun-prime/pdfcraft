@@ -112,10 +112,10 @@ git push origin custom/thai-no-ads
 |---|---|---|
 | `crates/fonts/src/craft.rs` | `document_thai_font` ถอยมาใช้ `installed_thai_font` ซึ่งต้องผ่าน `validate_document_input`, และ `standalone_face` แยก face ออกจาก `.ttc` | เก็บไว้ทั้งหมด ห้ามเอา Tahoma หรือ font ใน Word เข้ารายการที่จะฝังลง PDF เด็ดขาด เลือก face จากชื่อเต็ม "... Regular" เพราะ Thin กับ Medium ก็เรียกตัวเองว่า Regular |
 | `crates/fonts/src/lib.rs` | export `installed_thai_font` | เก็บชื่อนี้ไว้ในรายการ |
-| `crates/edit/src/added/layout.rs` | ข้อความ error บอกให้ติดตั้ง Sarabun หรือ Noto Sans Thai | เก็บคำว่า `CRAFT_FONTS_DIR` ไว้ เพราะมี test ตรวจ |
+| `crates/fonts/src/shaped_text.rs` | ข้อความ error ของ `thai_message` บอกให้ติดตั้ง Sarabun หรือ Noto Sans Thai | เก็บคำว่า `CRAFT_FONTS_DIR` และ `install Sarabun` ไว้ เพราะมี test ตรวจ |
 | `crates/ui-egui/src/platform/system_fonts.rs` | `thai_fallback`, `thai_candidates`, `thai_face`, `read_face` | เก็บลำดับ font ของเรา ห้ามใส่ Thonburi เพราะสระจะมีวงกลมประติดมา และต้องเลือก face "Text" ของ Sukhumvit Set ไม่ใช่ Thin |
 | `crates/ui-egui/src/theme.rs` | `SYSTEM_THAI_FALLBACK` ในรายการ font ของเครื่อง | เก็บไว้ ถ้าต้นทางเพิ่มของเหมือนกันให้เหลือชุดเดียว |
-| `crates/edit/src/text_regions/styled.rs` | `thai_face` ใน `FontResolver`, การเลือก font ใน `prepare`, ท้าย `shape_source` | ต้องเก็บทั้งสองจุด: `prepare` ใช้กับตัวอักษรที่ font ใน PDF ไม่มี ส่วน `shape_source` ใช้กับ font ที่ไม่มี GSUB |
+| `crates/fonts/src/plan.rs`, `crates/fonts/src/script.rs` | `document_faces` ใส่ `document_thai_font` ไว้ท้ายรายการ และ `glyph_in_face` ยอมรับสระบนล่างกับวรรณยุกต์ไทยที่กว้างเป็นศูนย์ เพื่อให้ผลลัพธ์ OCR แบบแก้ไขได้เขียนไทยได้ ไม่กลายเป็น `?` | เก็บไว้ |
 | `crates/render/src/system_font.rs`, `crates/render/src/raster.rs` | `Script::Thai` และ `names_thai_family` | เก็บไว้ ใช้กับ PDF ที่ไม่ฝัง font เฉพาะตอนแสดงบนจอ ห้ามเอา Tahoma ขึ้นก่อน เพราะไม่มี shaping แล้ววรรณยุกต์จะหาย |
 | `crates/ui-egui/src/home.rs` | ลบการ์ด community | ลบต่อไป แม้ต้นทางจะแก้ข้อความในการ์ด |
 | `crates/ui-egui/src/chrome.rs` | ลบปุ่ม Discord และความกว้างที่กันไว้ให้ปุ่ม | ลบต่อไป `controls_width` ต้องไม่นับปุ่ม Discord |
@@ -129,9 +129,20 @@ git push origin custom/thai-no-ads
 | `ATTRIBUTION.toml`, `ATTRIBUTION.md` | ลบรายการของ `docs/brand/*` และ `pdfcraft-tools.png` และรายการไอคอนเป็นของเรา (ผู้สร้าง ที่มา และ hash) | รวมรายการใหม่ของต้นทางเข้ามา ห้ามเอารายการ `docs/brand/*` กลับมา แล้วรัน `cargo xtask assets --write` |
 | `packaging/macos/Credits.rtf` | ข้อความเป็นของเรา ไม่มีลิงก์ Discord หรือเว็บ ArtCraft และบอกว่าเป็นฉบับไม่เป็นทางการ | เอาของเรา ถ้าต้นทางแก้ไฟล์นี้ให้ดูว่าเพิ่มลิงก์โปรโมทไหม แล้วรับเฉพาะส่วนที่ไม่ใช่โปรโมท |
 | `LICENSES.toml` | hash ของ `assets/app-icon/LICENSE.txt` เปลี่ยนเป็นของข้อความใบอนุญาตไอคอนใหม่ของเรา (ด่าน `license-check` บังคับให้ hash ตรง) | ถ้าโดน conflict ให้รับของต้นทางทั้งไฟล์ แล้วแก้บรรทัด `sha256` ของรายการ `assets/app-icon/LICENSE.txt` เป็นค่าจาก `shasum -a 256 assets/app-icon/LICENSE.txt` |
-| `crates/ocr/`, `crates/engine/src/ocr/`, `crates/ui-egui/src/workflows/ocr_ui.rs` | รวม PR #2520 ของต้นทาง (ยังไม่ถูก merge ที่ต้นทาง) แล้วเติมภาษาไทย: `THAI_MODEL`, การเผื่อขอบและกรองความมั่นใจใน `ppocr.rs`, `crates/ocr/build.rs` ฝังโมเดลลง exe, ค่าเริ่มต้นภาษาไทยในหน้าต่าง OCR และ `layer.rs` เปลี่ยนจาก Type 3 เป็น Type 0 ที่มีฟอนต์ว่าง เพราะ PDFKit ของ Apple มองไม่เห็นข้อความใน Type 3 ว่าง | ถ้าต้นทาง merge #2520 ให้รับของต้นทาง แล้วเก็บ 4 จุดนี้ไว้ อย่าเอา Type 3 กลับมา |
+| `crates/ocr/src/pp.rs`, `crates/ocr/src/ppocr.rs`, `crates/ocr/build.rs` | engine PP-OCR (`PpOcrRecognizer`, id `ppocr`) อ่านไทย จีน และละตินมีเครื่องหมาย ใช้ตัวหาบรรทัดของ ocrs กับโมเดลอ่านของ PP-OCR ส่วน `build.rs` ฝังโมเดลลง exe | เป็นไฟล์ของเราเอง ต้นทางเขียน OCR ใหม่ทั้งชุดใน #977 (ocrs กับ Tesseract) แต่ทั้งคู่อ่านไทยไม่ได้: ทดสอบกับเกียรติบัตรจริงเมื่อ 2026-11-10 ocrs อ่านออกมาเป็นตัวมั่ว และ Tesseract ไม่มีภาษาไทยในรายการ |
+| `crates/ocr/src/lib.rs`, `crates/engine/src/ocr.rs` | `LANGUAGES` รวมภาษาของ PP-OCR, `recognizers` ส่งภาษาของ PP-OCR ไปที่ `ppocr` (ยกเว้นผู้ใช้เลือก Tesseract), `available_for`, `read_pictures` และ `page_is_picture` | รับโค้ดของต้นทางก่อน แล้วใส่จุดเหล่านี้กลับ `custom-check` จะบอกถ้าหาย |
+| `crates/engine/src/ocr/layer.rs` | ชั้นข้อความใช้ฟอนต์ Type 0 ที่มี glyph ว่าง แทน Type 3 ว่างของต้นทาง เพราะ PDFKit ของ Apple มองไม่เห็นข้อความใน Type 3 ว่าง | รับ `validate_words` ของต้นทาง แต่ห้ามเอา Type 3 กลับมา |
+| `crates/ui-egui/src/workflows/ocr_ui.rs`, `crates/ui-egui/tests/it/ocr.rs` | หน้าต่าง OCR เปิดเป็นภาษาไทย และทั้งหน้าต่างกับโหมดแก้ไขอ่านรูปบนหน้าที่มีข้อความจริงด้วย (เกียรติบัตรที่พิมพ์ชื่อทับรูป) ส่วนต้นทางข้ามหน้าแบบนี้ | เก็บไว้ test ของต้นทาง `editing_a_page_with_text_over_a_background_picture_changes_nothing` ถูกแทนด้วย test ของเรา |
 | `apps/pdfcraft/src/main.rs`, `crates/ui-egui/src/lib.rs`, `crates/ui-egui/src/platform/updates.rs` | ไม่เช็กอัปเดตตอนเปิดแอป ปุ่มเช็กอัปเดตเปิดหน้า release ของ fork และ `UPDATE_APP.repo` เป็น fork | เก็บไว้ ถ้าปล่อยให้แอปถามต้นทาง รุ่นใหม่ของเขาจะเขียนทับฉบับไทย |
-| `.github/workflows/thai-build.yml`, `packaging/thai/` | ไฟล์ของเราเอง ต้นทางไม่มี จึงไม่ชน | เก็บไว้ทั้งหมด |
+| `.github/workflows/thai-build.yml`, `packaging/thai/` | ไฟล์ของเราเอง ต้นทางไม่มี จึงไม่ชน workflow ดึง `craft-i18n` (ตาม `craft-i18n.rev`) และ `craft-fonts` (pin เดียวกับ `ci.yml`) มาก่อน build | เก็บไว้ทั้งหมด ถ้าต้นทางเปลี่ยน pin ของ craft-fonts ใน `ci.yml` ให้เปลี่ยนตาม |
+
+ตั้งแต่ 2026-11 คำแปลทุกภาษาอยู่ใน `storytold/craft-i18n` ไม่ได้อยู่ในโปรเจกต์แล้ว ถ้า build โดยไม่ตั้ง `CRAFT_I18N_DIR` หน้าจอจะเป็นภาษาอังกฤษอย่างเดียว ในเครื่องนี้มีสำเนาอยู่ที่ `~/pdfcraft-deps/craft-i18n` และ `~/pdfcraft-deps/craft-fonts` ให้ build และรันเทสด้วย:
+
+```bash
+export CRAFT_I18N_DIR=$HOME/pdfcraft-deps/craft-i18n CRAFT_FONTS_DIR=$HOME/pdfcraft-deps/craft-fonts
+```
+
+ถ้า pin เปลี่ยน ให้ดึงใหม่ตาม `craft-i18n.rev` และ `craft-fonts-ref` ใน `ci.yml` เครื่องนี้ตั้งภาษาไทย เทส UI ที่ไม่ได้ตั้งภาษาเองจะเห็นป้ายเป็นไทยแล้วล้ม ให้รันด้วย `LC_ALL=en_US.UTF-8`
 
 test ที่เราแก้ตามไปด้วย: `crates/edit/src/tests.rs`, `crates/engine/src/links/tests.rs` และ `crates/ui-egui/tests/it/` (`content.rs`, `editing.rs`, `fonts.rs`, `links.rs`, `ui.rs`)
 
