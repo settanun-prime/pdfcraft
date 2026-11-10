@@ -8,7 +8,8 @@
   are written to %LOCALAPPDATA%\PdfCraft\models the first time they are needed. There is no MSI:
   the WiX files name ArtCraft, and this edition may not carry that name.
   The licence texts that must accompany a copy go in a separate text file next to the exe.
-  Output in dist\release: pdfcraft-<version>-thai-windows-x64.exe and ...-licences.txt
+  Output in dist\release: pdfcraft-<version>-thai-windows-x64.exe, ...-licences.txt and
+  ...-portable.zip (the exe with portable.txt, settings kept beside it).
 #>
 $ErrorActionPreference = 'Stop'
 $Root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -76,7 +77,19 @@ try {
       Add-Content -Path $Notes -Encoding utf8 -Value ""
     }
   }
-  Get-Item $Exe, $Notes | Format-Table Name, Length
+  # The portable copy: the same exe in a folder with portable.txt, so its settings and OCR models
+  # stay in PdfCraftData beside it (crates/ui-egui/src/platform/portable.rs).
+  $Stage = Join-Path $Root 'target\thai-package\portable'
+  $Folder = Join-Path $Stage 'PdfCraft TH Portable'
+  Remove-Item -Recurse -Force $Stage -ErrorAction SilentlyContinue
+  New-Item -ItemType Directory -Force -Path $Folder | Out-Null
+  Copy-Item $Exe (Join-Path $Folder 'PdfCraft TH.exe')
+  Copy-Item (Join-Path $Root 'packaging\thai\portable.txt') (Join-Path $Folder 'portable.txt')
+  Copy-Item $Notes (Join-Path $Folder 'licences.txt')
+  $Zip = Join-Path $Dist "pdfcraft-$Name-windows-x64-portable.zip"
+  Remove-Item -Force $Zip -ErrorAction SilentlyContinue
+  Compress-Archive -Path $Folder -DestinationPath $Zip
+  Get-Item $Exe, $Notes, $Zip | Format-Table Name, Length
 } finally {
   Pop-Location
 }

@@ -1,0 +1,17 @@
+PdfCraft TH, portable copy / ฉบับพกพา
+
+This file turns on portable mode. Keep it in the same folder as the program. Settings, recent
+files, crash-recovery copies and the OCR models are then kept in the PdfCraftData folder next to
+it, so the whole folder can live on a USB drive and be moved to another computer.
+
+ไฟล์นี้เปิดโหมดพกพา ให้อยู่โฟลเดอร์เดียวกับโปรแกรม การตั้งค่า ไฟล์ล่าสุด ไฟล์กู้คืน และโมเดล OCR
+จะเก็บในโฟลเดอร์ PdfCraftData ข้างกัน ย้ายทั้งโฟลเดอร์ใส่แฟลชไดรฟ์หรือไปเครื่องอื่นได้
+
+The folder must be writable. If it is not (a read-only drive, Program Files), the program keeps
+its settings in your user folder instead and says so.
+ถ้าเขียนโฟลเดอร์นี้ไม่ได้ โปรแกรมจะเก็บการตั้งค่าไว้ในเครื่องแทน และแจ้งให้ทราบ
+
+Mac: macOS runs a downloaded app from a hidden read-only copy until it is moved, so portable mode
+stays off the first time. Move the folder (in Finder) once, or run in Terminal:
+Mac: macOS เปิดแอปที่เพิ่งดาวน์โหลดจากสำเนาที่เขียนไม่ได้ ให้ย้ายโฟลเดอร์นี้ใน Finder หนึ่งครั้ง หรือรัน
+  xattr -dr com.apple.quarantine "PdfCraft TH Portable"

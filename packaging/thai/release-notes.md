@@ -16,8 +16,14 @@ endorsed by them.
 
 ## Downloads
 
-- Mac (Apple silicon): the `.dmg`.
-- Windows (x64): the `.exe`, with a text file of the licences that go with it.
+- Mac (Apple silicon): the `.dmg` to install, or the `-portable.zip` to run from any folder.
+- Windows (x64): the `.exe`, with a text file of the licences that go with it, or the
+  `-portable.zip` to run from any folder.
+
+The portable zips hold a folder with the program and a `portable.txt`: while that file is there,
+settings and the OCR models stay in a `PdfCraftData` folder beside the program, so the folder can
+live on a USB drive. On a Mac, move the folder once in Finder before the first run (macOS runs a
+freshly downloaded app from a read-only copy, and portable mode stays off there).
 
 These files are not signed. The first time you open them, macOS and Windows will warn you. On a
 Mac, right-click the app and choose Open. On Windows, choose More info, then Run anyway.

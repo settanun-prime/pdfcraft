@@ -121,15 +121,22 @@ impl PpModels {
 include!(concat!(env!("OUT_DIR"), "/embedded_models.rs"));
 
 /// The folder holding the models compiled into this program (`PDFCRAFT_EMBED_MODELS`, the one-file
-/// Windows build), written out once per version because the recognisers load from files.
+/// Windows build), written out once per version because the recognisers load from files. A
+/// portable copy (a `portable.txt` or `PdfCraft.portable` beside the exe) writes them into its own
+/// `PdfCraftData`, like its settings, and nothing into `%LOCALAPPDATA%`.
 pub fn embedded_dir() -> Option<PathBuf> {
     static DIR: std::sync::OnceLock<Option<PathBuf>> = std::sync::OnceLock::new();
     DIR.get_or_init(|| {
         if EMBEDDED.is_empty() {
             return None;
         }
+        let exe_dir = std::env::current_exe().ok().and_then(|e| e.parent().map(Path::to_path_buf));
+        let portable = exe_dir
+            .filter(|d| ["portable.txt", "PdfCraft.portable"].iter().any(|m| d.join(m).is_file()))
+            .map(|d| d.join("PdfCraftData").join("models"))
+            .filter(|d| std::fs::create_dir_all(d).is_ok());
         let base = std::env::var_os("LOCALAPPDATA").map_or_else(std::env::temp_dir, PathBuf::from);
-        let dir = base.join("PdfCraft").join("models").join(env!("CARGO_PKG_VERSION"));
+        let dir = portable.unwrap_or_else(|| base.join("PdfCraft").join("models")).join(env!("CARGO_PKG_VERSION"));
         std::fs::create_dir_all(&dir).ok()?;
         for (name, bytes) in EMBEDDED {
             let path = dir.join(name);

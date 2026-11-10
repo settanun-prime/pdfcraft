@@ -8,6 +8,10 @@
 //!
 //! If that folder can't be written (read-only medium, Program Files), portable mode stays off, the
 //! per-user folders are used and the app says why.
+//!
+//! On macOS the executable sits inside `PdfCraft.app/Contents/MacOS`, where nothing may be added
+//! without breaking the app's signature, so the marker and the data folder go beside the `.app`
+//! ([`marker_dir`]).
 
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -52,7 +56,7 @@ pub fn current() -> &'static Portable {
     static CURRENT: OnceLock<Portable> = OnceLock::new();
     CURRENT.get_or_init(|| {
         let exe = std::env::current_exe().ok();
-        let portable = resolve(exe.as_deref().and_then(Path::parent));
+        let portable = resolve(exe.as_deref().and_then(Path::parent).map(marker_dir));
         if let Some(dir) = &portable.dir {
             log::info!("portable mode: settings are kept in {}", dir.display());
         }
@@ -66,6 +70,16 @@ pub fn current() -> &'static Portable {
 /// The portable data folder, when portable mode is on.
 pub fn data_dir() -> Option<&'static Path> {
     current().dir.as_deref()
+}
+
+/// The folder a marker is looked for in: the executable's own, or for a macOS app bundle
+/// (`X.app/Contents/MacOS`) the folder holding the `.app`.
+pub fn marker_dir(exe_dir: &Path) -> &Path {
+    let bundle = exe_dir.parent().filter(|_| exe_dir.file_name().is_some_and(|n| n == "MacOS")).and_then(|contents| {
+        let app = contents.parent().filter(|_| contents.file_name().is_some_and(|n| n == "Contents"))?;
+        app.extension().is_some_and(|e| e.eq_ignore_ascii_case("app")).then_some(app)
+    });
+    bundle.and_then(Path::parent).unwrap_or(exe_dir)
 }
 
 /// Look for a marker in `exe_dir` and, when one is there, create its data folder beside it.
@@ -106,6 +120,22 @@ mod tests {
         let _ = std::fs::remove_dir_all(&d);
         std::fs::create_dir_all(&d).unwrap();
         d
+    }
+
+    /// A macOS app keeps its marker and data beside the `.app`, not inside the signed bundle.
+    #[test]
+    fn a_mac_app_looks_beside_its_bundle() {
+        let usb = Path::new("/Volumes/USB/PdfCraft TH Portable");
+        assert_eq!(marker_dir(&usb.join("PdfCraft TH.app/Contents/MacOS")), usb);
+        assert_eq!(marker_dir(Path::new("C:/Tools/PdfCraft")), Path::new("C:/Tools/PdfCraft"));
+        assert_eq!(marker_dir(Path::new("/opt/MacOS")), Path::new("/opt/MacOS"), "only inside a bundle");
+        let dir = temp("bundle");
+        let exe = dir.join("PdfCraft TH.app/Contents/MacOS");
+        std::fs::create_dir_all(&exe).unwrap();
+        std::fs::write(dir.join("portable.txt"), b"").unwrap();
+        assert_eq!(resolve(Some(marker_dir(&exe))).dir, Some(dir.join(DATA_DIR)));
+        assert!(!exe.join(DATA_DIR).exists(), "nothing is written inside the bundle");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
