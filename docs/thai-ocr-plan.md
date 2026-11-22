@@ -7,8 +7,8 @@
 Scan & OCR อ่านไทยและอังกฤษได้ในเครื่อง ไม่ส่งไฟล์ออกไปไหน ใช้ได้ทั้ง Mac, Windows และ Ubuntu เพราะรันผ่าน `rten` ซึ่งเป็น Rust ล้วน ได้ PDF ที่ค้นหาและคัดลอกข้อความไทยได้ ภาพหน้าเดิมไม่เปลี่ยน
 
 - **ตัวตรวจบรรทัด:** `text-detection.onnx` ของ `ocrs` ตัวเดิม
-- **ตัวอ่าน:** PaddleOCR PP-OCRv5 Thai mobile (`thai-recognition.onnx`) 7.9 MB ใบอนุญาต Apache-2.0 แปลงเป็น ONNX โดย RapidAI
-- **พจนานุกรม:** `ppocrv5_th_dict.txt` จาก PaddleOCR v3.2.0 ในไฟล์นี้ `ω` กับ `ก` ติดกันอยู่บรรทัดเดียว (พลาดจากต้นฉบับ) ส่วนรายการในตัวโมเดลแยกกัน `ppocr.rs` จึงแยกให้
+- **ตัวอ่าน:** OpenThai 2.1 OCR Text (`thai-recognition.onnx`, `rec.onnx`) ขนาด 2.39 MB (ชุดโมเดลทั้งหมด 6.57 MB) ใบอนุญาต Apache-2.0 พัฒนาโดย iApp Technology ร่วมกับ AIEAT (อัปเกรดเมื่อ 2026-11-22 จากการทดสอบเปรียบเทียบใน `docs/thai_ocr_benchmark_report.md` ซึ่งเร็วกว่าเดิม 2.68 เท่า ลด CER เหลือ 30.47% และเก็บตัวเลขเดี่ยวในตารางได้ครบ 100%)
+- **พจนานุกรม:** `rec_dict.txt` (528 อักขระ รวม CTC blank และ space เป็น 530 คลาส)
 - **ชั้นข้อความ:** ฟอนต์ Type 0 ที่มี glyph ว่าง (`crates/engine/src/ocr/layer.rs`) เพราะ PDFKit ของ Apple มองไม่เห็นข้อความใน Type 3 ว่าง
 
 ## ผลทดสอบกับใบประกาศจริง (ภาพ 300 dpi)

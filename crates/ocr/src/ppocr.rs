@@ -75,7 +75,9 @@ impl PpOcr {
         let text = decode(&values, &self.alphabet, preferred)?;
         let score = score(&values, self.alphabet.len());
         // A lone character needs a clear lead: decorations read as single letters.
-        let needed = if text.chars().count() == 1 { self.min_score.max(LONE_CHARACTER_SCORE) } else { self.min_score };
+        // Isolated single-digit numbers in table cells (e.g. quantity "2" or "๕") are preserved.
+        let is_digit = text.chars().all(|c| c.is_ascii_digit() || ('\u{0e50}'..='\u{0e59}').contains(&c));
+        let needed = if text.chars().count() == 1 && !is_digit { self.min_score.max(LONE_CHARACTER_SCORE) } else { self.min_score };
         if self.min_score > 0.0 && score < needed {
             return Ok((String::new(), 0.0));
         }

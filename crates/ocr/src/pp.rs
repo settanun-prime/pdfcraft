@@ -20,14 +20,14 @@ pub const THAI_DICTIONARY: &str = "thai-keys.txt";
 /// Thai reads best with a margin around the line for its marks, and artwork on a certificate reads
 /// as scattered letters that score far below real text (measured on a scanned certificate: text
 /// 0.82 to 0.97, decorations mostly under 0.6).
-const THAI_PADDING: f32 = 0.15;
+const THAI_PADDING: f32 = 0.25;
 const THAI_MIN_SCORE: f32 = 0.6;
 
 /// The PP-OCR languages: (code, model file, dictionary file, output classes = CTC blank +
 /// one per dictionary line + the appended space). The class count is pinned per model, so a
 /// wrong or truncated dictionary fails at load instead of decoding garbage.
 const PP_OCR: &[(&str, &str, &str, usize)] = &[
-    ("th", THAI_MODEL, THAI_DICTIONARY, 526),
+    ("th", THAI_MODEL, THAI_DICTIONARY, 530),
     ("zh", CHINESE_MODEL, CHINESE_DICTIONARY, 6625),
     ("la", LATIN_MODEL, LATIN_DICTIONARY, 504),
     ("fr", LATIN_MODEL, LATIN_DICTIONARY, 504),
