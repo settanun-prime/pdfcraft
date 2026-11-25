@@ -7,6 +7,8 @@ Branch `custom/thai-no-ads` เพิ่มสี่เรื่องจาก�
 3. ใช้ไอคอนของเราเอง (คำว่า pdfคับ บนกระดาษสีแดง) เพื่อให้รู้ว่าเป็นเวอร์ชันไทย
 4. เอาชื่อและโลโก้ ArtCraft ออกจากแอป เมนู CLI README และโฟลเดอร์ `docs/brand` ตามที่ต้นทางกำหนดไว้สำหรับ fork ที่แก้ไข
 
+**ต้นทางย้ายหน้าจอไปไลบรารี craft-libs (2026-11-25):** โค้ดหน้าจอส่วนใหญ่ (theme, widgets, portable, system_fonts, staging) อยู่ใน `storytold/craft-libs` ที่ pin ไว้ใน `Cargo.toml` แก้ตรงนั้นไม่ได้ ของเราที่เคยแก้ในไฟล์เหล่านั้นจึงเหลือเฉพาะที่อยู่ในโค้ดของ pdfcraft เอง (home, chrome, about, lib) โหมดพกพาบน Mac ต้นทางทำให้แล้ว
+
 **สถานะ (2026-10-31):** build และทดสอบผ่านบน macOS แล้ว ยังไม่เคย build หรือทดสอบบน Windows
 
 ## กติกา
@@ -113,15 +115,12 @@ git push origin custom/thai-no-ads
 | `crates/fonts/src/craft.rs` | `document_thai_font` ถอยมาใช้ `installed_thai_font` ซึ่งต้องผ่าน `validate_document_input`, และ `standalone_face` แยก face ออกจาก `.ttc` | เก็บไว้ทั้งหมด ห้ามเอา Tahoma หรือ font ใน Word เข้ารายการที่จะฝังลง PDF เด็ดขาด เลือก face จากชื่อเต็ม "... Regular" เพราะ Thin กับ Medium ก็เรียกตัวเองว่า Regular |
 | `crates/fonts/src/lib.rs` | export `installed_thai_font` | เก็บชื่อนี้ไว้ในรายการ |
 | `crates/fonts/src/shaped_text.rs` | ข้อความ error ของ `thai_message` บอกให้ติดตั้ง Sarabun หรือ Noto Sans Thai | เก็บคำว่า `CRAFT_FONTS_DIR` และ `install Sarabun` ไว้ เพราะมี test ตรวจ |
-| `crates/ui-egui/src/platform/system_fonts.rs` | `thai_fallback`, `thai_candidates`, `thai_face`, `read_face` | เก็บลำดับ font ของเรา ห้ามใส่ Thonburi เพราะสระจะมีวงกลมประติดมา และต้องเลือก face "Text" ของ Sukhumvit Set ไม่ใช่ Thin |
-| `crates/ui-egui/src/theme.rs` | `SYSTEM_THAI_FALLBACK` ในรายการ font ของเครื่อง | เก็บไว้ ถ้าต้นทางเพิ่มของเหมือนกันให้เหลือชุดเดียว |
 | `crates/fonts/src/plan.rs`, `crates/fonts/src/script.rs` | `document_faces` ใส่ `document_thai_font` ไว้ท้ายรายการ และ `glyph_in_face` ยอมรับสระบนล่างกับวรรณยุกต์ไทยที่กว้างเป็นศูนย์ เพื่อให้ผลลัพธ์ OCR แบบแก้ไขได้เขียนไทยได้ ไม่กลายเป็น `?` | เก็บไว้ |
 | `crates/render/src/system_font.rs`, `crates/render/src/raster.rs` | `Script::Thai` และ `names_thai_family` | เก็บไว้ ใช้กับ PDF ที่ไม่ฝัง font เฉพาะตอนแสดงบนจอ ห้ามเอา Tahoma ขึ้นก่อน เพราะไม่มี shaping แล้ววรรณยุกต์จะหาย |
 | `crates/ui-egui/src/home.rs` | ลบการ์ด community | ลบต่อไป แม้ต้นทางจะแก้ข้อความในการ์ด |
 | `crates/ui-egui/src/chrome.rs` | ลบปุ่ม Discord และความกว้างที่กันไว้ให้ปุ่ม | ลบต่อไป `controls_width` ต้องไม่นับปุ่ม Discord |
 | `crates/ui-egui/src/lib.rs`, `crates/ui-egui/src/app.rs` | ลบ field `community_card_closed` | ลบต่อไป |
-| `crates/ui-egui/src/widgets.rs` | ลบ `artcraft_logo` และ `artcraft_mark` เปลี่ยน `community_links` เป็น `project_links` | ลบต่อไป ถ้าต้นทางเพิ่มฟังก์ชันวาดโลโก้ใหม่ให้ลบด้วย |
-| `crates/ui-egui/src/dialogs.rs` | หน้า About ใช้ไอคอน PdfCraft แทนโลโก้ ลบแถว "Part of" และใส่ข้อความว่าไม่ใช่ของทางการ | เก็บไอคอนและข้อความของเรา รับส่วนอื่นของต้นทาง |
+| `crates/ui-egui/src/dialogs/about.rs`, `crates/ui-egui/src/brand.rs` | About ไม่วาดโลโก้ ArtCraft และบอกว่าเป็นฉบับไม่เป็นทางการ ลบ `brand.rs` (ใช้ `docs/brand/artcraft-mark.svg`) | ลบต่อไป เก็บข้อความ "unofficial Thai edition" |
 | `crates/engine/src/links.rs`, `crates/engine/src/commands.rs`, `crates/ui-egui/src/menus.rs` | ลบรายการ `help.discord`, `help.website` และค่า `DISCORD`, `WEBSITE` | ลบต่อไป ถ้าต้นทางเพิ่มลิงก์ชุมชนใหม่ให้ลบด้วย |
 | `apps/pdfcraft-cli/src/main.rs` | ลบบรรทัด Discord ใน help และ `--version` | ลบต่อไป |
 | `README.md`, `.gitattributes` | README เป็นของเราเอง และมีบรรทัด `README.md merge=ours` | ไม่ควรโดน conflict ถ้าตั้ง `merge.ours.driver` แล้ว ถ้าโดน ให้เอาของเรา (`git checkout --ours README.md`) |
@@ -191,7 +190,7 @@ cargo xtask assets --write
 
 ## font ที่ใช้
 
-- **ตัวแอป (แสดงบนจอ):** Sukhumvit Set, Sathu, Silom, Tahoma ตามลำดับ
+- **ตัวแอป (แสดงบนจอ):** font ไทยจาก craft-fonts (Noto Sans Thai, OFL) ที่ฝังตอน build (ต้นทางย้ายส่วนหน้าจอไปอยู่ในไลบรารี craft-libs จึงเลิกแก้รายการ font ของเครื่องเอง)
 - **เปิดดู PDF ที่ไม่ฝัง font (แสดงบนจอ):** Sukhumvit Set, Sathu, Tahoma ตามลำดับ
 - **เขียนลง PDF บน macOS:** ไฟล์ที่ผู้ใช้ติดตั้งเอง (`Sarabun-Regular.ttf`, `THSarabunNew.ttf`, `NotoSansThai-Regular.ttf` ใน `/Library/Fonts` หรือ `~/Library/Fonts`) แล้วจึง `Sarabun.ttc` ที่ macOS โหลดมาไว้ ทุกไฟล์ต้องประกาศสัญญาเปิดในตัว font เอง ถ้าไม่ประกาศจะถูกข้าม
 - **เขียนลง PDF บน Windows:** ไฟล์ชื่อเดียวกันใน `C:\Windows\Fonts` หรือ `%LOCALAPPDATA%\Microsoft\Windows\Fonts` เท่านั้น Windows ไม่มี Sarabun มาให้ ต้องติดตั้งเอง ถ้าไม่มี Add Text ภาษาไทยจะขึ้น error บอกให้ติดตั้ง

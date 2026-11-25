@@ -19,13 +19,11 @@ CHROME = "crates/ui-egui/src/chrome.rs"
 LIB = "crates/ui-egui/src/lib.rs"
 APP = "crates/ui-egui/src/app.rs"
 CRAFT = "crates/fonts/src/craft.rs"
-UI_FONTS = "crates/ui-egui/src/platform/system_fonts.rs"
-THEME = "crates/ui-egui/src/theme.rs"
 EDIT = "crates/edit/src/text_regions/styled.rs"
 VIEWER = "crates/render/src/system_font.rs"
 ICON = "assets/app-icon/pdfcraft.svg"
-WIDGETS = "crates/ui-egui/src/widgets.rs"
-DIALOGS = "crates/ui-egui/src/dialogs.rs"
+ABOUT = "crates/ui-egui/src/dialogs/about.rs"
+BRAND = "crates/ui-egui/src/brand.rs"
 COMMANDS = "crates/engine/src/commands.rs"
 LINKS = "crates/engine/src/links.rs"
 README = "README.md"
@@ -47,9 +45,11 @@ PROMOTION = re.compile(r"discord|community|sponsor|donat|join (the|our)|newslett
 ABSENT = [
     (LIB, "community_card_closed", "the community card's state is back"),
     (APP, "community_card_closed", "the community card's state is back"),
-    (WIDGETS, "artcraft_logo", "the ArtCraft wordmark is drawn again"),
-    (WIDGETS, "artcraft_mark", "the ArtCraft mark is drawn again"),
-    (DIALOGS, "artcraft_", "the About dialog draws an ArtCraft mark again"),
+    (HOME, "CloseCommunityCard", "the home screen's community card is back"),
+    (HOME, "brand::", "the home screen draws the ArtCraft mark again"),
+    (CHROME, "help.discord", "the title bar has a Discord button again"),
+    (ABOUT, "docs/brand", "the About dialog draws an ArtCraft mark again"),
+    (ABOUT, "Join our Discord", "the About dialog promotes Discord again"),
     (COMMANDS, "help.discord", "the Help menu has a Discord entry again"),
     (COMMANDS, "help.website", "the Help menu has an ArtCraft website entry again"),
     (LINKS, "discord.gg", "the links table points to Discord again"),
@@ -58,7 +58,6 @@ ABSENT = [
     (README, "docs/brand", "the README shows the ArtCraft logos again; keep this edition's own README"),
     (README, "discord.gg/artcraft", "the README promotes the community again; keep this edition's own README"),
     (CRAFT, "PathBuf::from(\"/Applications/Microsoft Word.app", "a Microsoft font is a candidate for writing into PDFs again"),
-    (UI_FONTS, "Thonburi.ttc", "Thonburi is listed for the interface; its marks show dotted circles without shaping"),
     (CREDITS, "discord", "the macOS About panel links to Discord again"),
     (CREDITS, "getartcraft.com", "the macOS About panel links to the ArtCraft site again"),
     (WORKFLOW, "xlarge", "the Thai build uses a paid macOS runner; keep the free macos-latest"),
@@ -76,13 +75,10 @@ PRESENT = [
     (CRAFT, ".or_else(installed_thai_font)", "writing Thai no longer falls back to an installed font"),
     (CRAFT, "fn standalone_face", "a face can't be taken out of a .ttc any more"),
     (CRAFT, '"Sarabun.ttc"', "Sarabun is gone from the Thai document fonts"),
-    (UI_FONTS, "fn thai_fallback", "the interface has no installed Thai font"),
-    (UI_FONTS, "fn thai_face", "the Thai interface face is no longer picked by style, so Sukhumvit Set draws in Thin"),
-    (UI_FONTS, 'macos_candidates(&["SukhumvitSet.ttc"', "Sukhumvit Set no longer comes first for the interface"),
-    (THEME, "thai_fallback()", "the installed Thai font is not on the interface"),
     (VIEWER, "names_thai_family", "PDFs that don't embed a Thai font no longer use an installed one"),
     (VIEWER, '&["Supplemental/SukhumvitSet.ttc", "Supplemental/Sathu.ttf"', "Sukhumvit Set no longer comes first in the viewer; tone marks disappear without it"),
     (ICON, 'id="thai-logo"', "the app icon is not the Thai logo (the upstream lion is back?)"),
+    (ABOUT, "unofficial Thai edition", "the About dialog no longer says this is an unofficial edition"),
     (CREDITS, "unofficial Thai edition", "the macOS About panel no longer says this is an unofficial edition"),
     (WORKFLOW, "runs-on: macos-latest", "the Thai build workflow is gone or no longer uses the free macOS runner"),
     (WORKFLOW, "--draft", "the Thai build would publish a release without a draft stage"),
